@@ -415,11 +415,11 @@ class JWPubMedia(JWBroadcasting):
         # Watchtower/Awake reference is split up into pub and issue
         magazine_match = re.match('(wp?|g)([0-9]+)', self.pub)
         if magazine_match:
-            url_template = url_template + '&issue={i}'
+            url_template += '&issue={i}'
             self.pub = magazine_match.group(1)
             queue = [magazine_match.group(2)]
         else:
-            url_template = url_template + '&booknum={i}'
+            url_template += '&booknum={i}'
             queue = [self.book]
 
         # Check language code
@@ -431,7 +431,7 @@ class JWPubMedia(JWBroadcasting):
         with urllib.request.urlopen(url) as response:
             response = json.loads(response.read().decode())
 
-                # Check if the code is valid
+            # Check if the code is valid
             if self.lang not in response['languages']:
                 msg('language codes:')
                 for lang in sorted(response['languages'], key=lambda x: response['languages'][x]['name']):
@@ -441,7 +441,7 @@ class JWPubMedia(JWBroadcasting):
         bare = True
         for key in queue:
             url = url_template.format(L=self.lang, p=self.pub, i=key, a=0)
-            # print('URL:', url)
+            print('URL:', url)
             book = Category()
             self.result.append(book)
 
@@ -489,8 +489,11 @@ class JWPubMedia(JWBroadcasting):
             except urllib.error.HTTPError:
                 pass
         if bare:
-            msg(f'It seems that there are no {self.type} files in {self.lang} language '
-                f'for {rawpub} publication')
+            s = (f'It seems that there are no {self.type} files in {self.lang} '
+                 f'language for {rawpub} publication')
+            if self.type == 'video':
+                s += f' in quality {self.quality}'
+            msg(s)
         return self.result
 
 

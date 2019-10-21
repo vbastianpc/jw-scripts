@@ -58,8 +58,8 @@ valid_args = {
     'work_dir': {
         # When nargs=? and the argument is left out, it stores None
         # We put SUPPRESS here so that it doesn't overwrite the previous value in that case
-        'default': SUPPRESS,
-        'nargs': '?',
+        # 'default': SUPPRESS,
+        # 'nargs': '?',
         'metavar': 'DIR',
         'help': 'directory to save data in'}}
 
