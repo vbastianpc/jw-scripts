@@ -21,12 +21,11 @@ class JWBroadcasting:
 
     Tweak the variables, and run :method:`parse` and then :method:`download_all`
     """
-    __lang = 'E'
     __mindate = None
+    lang = 'S'
     quality = 720
     subtitles = False
     burned_subtitles = False
-    download = False
     streaming = False
     quiet = 0
     checksums = False
@@ -394,15 +393,9 @@ class JWPubMedia(JWBroadcasting):
     book = 0
     # Disable rate limit completely
     rate_limit = '0'
-    # Disable curl
-    # Since downloads of sound is so small it seems more worth
-    # to stay compatible (urllib) than fancy (curl with progress bar)
     curl_path = 'curl'
-    # This creates a local name for lang, and overwrites the setter/getter
-    # property inherited from JWBroadcasting
-    lang = 'E'
-    type = 'audio'
     quality = 720
+    lang = 'S'
 
     def parse(self):
         """Index JW org sound recordings
@@ -427,7 +420,7 @@ class JWPubMedia(JWBroadcasting):
         # We want the languages for THAT publication only, or else the list gets SOO long
         # The language is checked on the first pub in the queue
         url = url_template.format(L='E', p=self.pub, i=queue[0], a='1')
-        # print(url)
+        print(url)
         with urllib.request.urlopen(url) as response:
             response = json.loads(response.read().decode())
 
