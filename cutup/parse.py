@@ -71,10 +71,9 @@ class JWSigns:
 
                         if self.nwt is None:
                             self.nwt = True if filename.startswith('nwt') else False
-
                         if self.nwt is True and filename.startswith('nwt'):
                             book = int(get_nwt_video_info(filename, 'booknum'))
-                            if book == self.book:
+                            if book == self.book or self.book == 0:
                                 videos.append(pj(dirpath, filename))
 
                         elif self.nwt is False and not filename.startswith('nwt'):
