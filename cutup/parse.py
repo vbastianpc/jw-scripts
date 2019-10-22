@@ -10,7 +10,7 @@ from json.decoder import JSONDecodeError
 
 from cutup.constants import (
     FFMPEG, probe_markers, ext, woext, parse_num_book, attrib_hidden,
-    get_nwt_video_info, add_numeration
+    get_nwt_video_info, add_numeration, ffprobe_height
 )
 
 
@@ -147,6 +147,7 @@ class JWSigns:
                 print('done')
             else:
                 print(process.stdout, process.stderr)
+                os.remove(outvid)
         self.write_json(self.db)
 
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
@@ -160,8 +161,15 @@ class JWSigns:
                 '-map_chapters', '-1', '-metadata', 'title=',
                 '-metadata', 'comment=Created by vbastianpc']
         if color:
-            vf = (f'drawbox=x=0:y=0:w=170:h=720:color={color}:t=fill, '
-                  f'drawbox=x=1110:y=0:w=170:h=720:color={color}:t=fill')
+            height = self.current_height
+            delta = int(height * 4 / 3 * 0.02)  # 2% security
+            width_bar = int((height * 16 / 9 - height * 4 / 3) / 2) + delta
+            x_offset = int(height * 16 / 9 - width_bar)
+            vf = (
+                f'drawbox=x=0:y=0:w={width_bar}:h={height}:color={color[0]}:t=fill, '
+                f'drawbox=x={x_offset}:y=0:w={width_bar}:h={height}:color={color[1]}:t=fill'
+                )
+            print(vf)
             cmd += ['-vf', vf]
         if hwaccel:
             cmd += ['-c:v', 'h264_nvenc']
@@ -181,7 +189,7 @@ class JWSigns:
                '-vframes', '1',
                snapshot]
         run(cmd, capture_output=True)
-
+        self.current_height = ffprobe_height(dir_file)
         try:
             im = imageio.imread(snapshot)
         except OSError:
@@ -189,7 +197,16 @@ class JWSigns:
         else:
             rgb = tuple(im[20][20])
             if rgb == (0, 0, 0):
-                color = '0x{0[0]:x}{0[1]:x}{0[2]:x}'.format(im[165][360])
+                delta = int(self.current_height * 4 / 3 * 0.03)  # 3% security
+                x = int((self.current_height * 16 / 9 - self.current_height * 4 / 3) / 2) + delta
+                y = int(self.current_height / 2)
+                r, g, b = im[y][x]
+                colorleft = format(r, '02X') + format(g, '02X') + format(b, '02X')
+
+                x = int(self.current_height * 16 / 9) - x
+                r, g, b = im[y][x]
+                colorright = format(r, '02X') + format(g, '02X') + format(b, '02X')
+                color = (colorleft, colorright)
             else:
                 color = False
             os.remove(snapshot)

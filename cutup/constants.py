@@ -174,6 +174,18 @@ def probe_general(video):
     return json.loads(generaljson)
 
 
+def ffprobe_height(video):
+    cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'stream=height',  '-of',
+           'default=noprint_wrappers=1:nokey=1', '-select_streams', 'v:0',
+           video]
+    height = terminal(cmd)[1]
+    try:
+        return int(height)
+    except ValueError:
+        print(height, 'no se pudo')
+        pass
+
+
 def add_numeration(wd, num_bookname):
     for booknum, bookname in num_bookname.items():
         try:
