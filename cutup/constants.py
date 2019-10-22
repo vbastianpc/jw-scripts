@@ -27,27 +27,28 @@ def parse_num_book(lang, work_dir):
                        '?output=json&alllangs=0&langwritten={L}&txtCMSLang={L}' \
                        '&pub=nwt&booknum={i}'
         num_book = {}
+        print(f'Getting booknum and bookname in {lang} language')
         for i in range(1, 67):
             url = url_template.format(L=lang, i=i)
-            print(url)
             with urllib.request.urlopen(url) as response:
                 response = json.loads(response.read().decode())
                 # Check if the code is valid
                 if lang not in response['languages']:
                     msg('language codes:')
-                    for lang in sorted(response['languages'], key=lambda x: response['languages'][x]['name']):
-                        msg('{:>3}  {:<}'.format(lang, response['languages'][lang]['name']))
+                    for language in sorted(response['languages'], key=lambda x: response['languages'][x]['name']):
+                        msg('{:>3}  {:<}'.format(language, response['languages'][language]['name']))
                     raise ValueError(lang + ': invalid language code')
                     exit()
                 num_book.setdefault(format(i, '02'), response['pubName'])
+                print(format(i, '02'), response['pubName'])
 
         with open(dir_file, 'w', encoding='utf-8') as json_file:
             json.dump(num_book, json_file, ensure_ascii=False, indent=4)
+        attrib_hidden(dir_file)
         return num_book
 
 
-def mkdir_hidden(dir):
-    os.makedirs(dir, exist_ok=True)
+def attrib_hidden(dir):
     if platform.system() == 'Windows':
         ctypes.windll.kernel32.SetFileAttributesW(dir, 0x02)
     elif platform.system() == 'Darwin':
@@ -120,19 +121,20 @@ def probe_markers(filename, bookname):
                 }
             )
         else:
-            print(f'No reconoci{filename}\t{t}')
+            print(f'No reconoci {filename}\t{t}')
     return markers
 
 
 def get_nwt_video_info(filename, info):
     if info == 'booknum':
-        return os.path.basename(filename).split('_')[1]
+        answer = os.path.basename(filename).split('_')[1]
     elif info == 'bookalias':
-        return os.path.basename(filename).split('_')[2]
+        answer = os.path.basename(filename).split('_')[2]
     elif info == 'lang':
-        return os.path.basename(filename).split('_')[3]
+        answer = os.path.basename(filename).split('_')[3]
     elif info == 'chapter':
-        return os.path.basename(filename).split('_')[4]
+        answer = os.path.basename(filename).split('_')[4]
+    return answer
 
 
 def get_chptr_verse(raw_title):
@@ -170,6 +172,24 @@ def probe_general(video):
                          '-print_format', 'json', video]
     generaljson = terminal(cmd_probe_general)[1]
     return json.loads(generaljson)
+
+
+def add_numeration(wd, num_bookname):
+    for booknum, bookname in num_bookname.items():
+        try:
+            os.rename(pj(wd, bookname),
+                      pj(wd, f'{booknum} {bookname}'))
+        except FileNotFoundError:
+            pass
+
+
+def remove_numeration(wd, num_bookname):
+    for booknum, bookname in num_bookname.items():
+        try:
+            os.rename(pj(wd, f'{booknum} {bookname}'),
+                      pj(wd, bookname))
+        except FileNotFoundError:
+            pass
 
 
 if __name__ == '__main__':
