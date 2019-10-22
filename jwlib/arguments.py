@@ -12,15 +12,25 @@ valid_args = {
         'help': 'Less info, can be used multiple times'},
     '--mode': {
         'choices': ['stdout', 'filesystem', 'm3u', 'm3ucompat', 'html'],
+        'default': 'stdout',
         'help': 'output mode',
         'dest': 'mode'},
     '--lang': {
-        'default': 'E',
+        'default': 'S',
         'nargs': '?',
         'help': 'language code'},
+    '--book': {
+        'metavar': 'NUM',
+        'default': 0,
+        'type': int,
+        'help': 'bible book to index'},
     '--download': {
         'action': 'store_true',
+        'default': True,
         'help': 'download media files'},
+    '--no-download': {
+        'action': 'store_false',
+        'dest': 'download'},
     '--quality': {
         'default': 720,
         'type': int,
