@@ -9,8 +9,8 @@ from io import UnsupportedOperation
 from json.decoder import JSONDecodeError
 
 from cutup.constants import (
-    FFMPEG, probe_markers, ext, woext, parse_num_book, mkdir_hidden,
-    get_nwt_video_info,
+    FFMPEG, probe_markers, ext, woext, parse_num_book, attrib_hidden,
+    get_nwt_video_info, add_numeration
 )
 
 
@@ -30,32 +30,13 @@ except ModuleNotFoundError:
             'sudo pip install imageio')
 
 
-def agregar_numeracion(wd, num_bookname):
-    for booknum, bookname in num_bookname.items():
-        try:
-            os.rename(pj(wd, bookname),
-                      pj(wd, f'{booknum} {bookname}'))
-        except FileNotFoundError:
-            pass
-
-
-def quitar_numeracion(wd, num_bookname):
-    for booknum, bookname in num_bookname.items():
-        try:
-            os.rename(pj(wd, f'{booknum} {bookname}'),
-                      pj(wd, bookname))
-        except FileNotFoundError:
-            pass
-
-
 class JWSigns:
     """
     Clase
     """
-    nwt = True
+    nwt = None
     book = 0
-    dirin = None
-    file = None
+    input = None
     work_dir = None
     hwaccel = False
 
@@ -63,10 +44,9 @@ class JWSigns:
         pass
 
     def _get_db(self):
-        print(self.work_dir)
         dir = pj(self.work_dir, 'db')
-        print(dir)
-        mkdir_hidden(dir)
+        os.makedirs(dir, exist_ok=True)
+        attrib_hidden(dir)
         self.dirdb = pj(dir, 'db.json')
         if not os.path.exists(self.dirdb):
             with open(self.dirdb, 'w'):
@@ -81,17 +61,28 @@ class JWSigns:
         return db
 
     def get_match_videos(self):
-        if self.file:
-            return [self.file]
-        videos = []
-        for dirpath, dirnames, filenames in os.walk(self.dirin):
-            for filename in filenames:
-                if filename.endswith('.mp4') or filename.endswith('.m4v'):
-                    if self.nwt and filename.startswith('nwt'):
-                        videos.append(pj(dirpath, filename))
-                    elif not self.nwt and not filename.startswith('nwt'):
-                        videos.append(pj(dirpath, filename))
-        return videos
+        if os.path.isfile(self.input):
+            return [self.input]
+        elif os.path.isdir(self.input):
+            videos = []
+            for dirpath, dirnames, filenames in os.walk(self.input):
+                for filename in sorted(filenames):
+                    if filename.endswith('.mp4') or filename.endswith('.m4v'):
+
+                        if self.nwt is None:
+                            self.nwt = True if filename.startswith('nwt') else False
+
+                        if self.nwt is True and filename.startswith('nwt'):
+                            book = int(get_nwt_video_info(filename, 'booknum'))
+                            if book == self.book:
+                                videos.append(pj(dirpath, filename))
+
+                        elif self.nwt is False and not filename.startswith('nwt'):
+                            videos.append(pj(dirpath, filename))
+
+            return videos
+        else:
+            raise ValueError(f'{self.input} is not a valid directory')
 
     def get_cutup_verses(self):
         versiculos = {}
@@ -105,37 +96,44 @@ class JWSigns:
 
     def parse(self):
         self.db = self._get_db()
-        print(self.db, '\n\n')
         verse_videos = self.get_cutup_verses()
-        chapter_videos = self.get_match_videos()
+        match_videos = self.get_match_videos()
+        if self.nwt is False:
+            print('For now I can only split Bible videos')
+            exit()
+
         self.num_bookname = parse_num_book(
-            get_nwt_video_info(chapter_videos[0], 'lang'),
+            get_nwt_video_info(match_videos[0], 'lang'),
             self.work_dir,
             )
-        quitar_numeracion(self.work_dir, self.num_bookname)
+        add_numeration(self.work_dir, self.num_bookname)
 
         result = []
-        for video in chapter_videos:
+        for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
             markers = probe_markers(video, bookname=self.num_bookname[booknum])
             for mark in markers:
-                print(mark['title'], end='\t')
+                # print(mark['title'], end='\t')
                 if self.db.get(woext(video)) == os.stat(video).st_size and \
                         verse_videos.get(mark['title']):
                     # verse it exist, do nothing
-                    print('already exists')
+                    pass
+                    # print('already exists')
                 else:
-                    print('to split')
+                    # print('to split')
                     result.append(mark)
             self.db[woext(video)] = os.stat(video).st_size
         return result
 
     def cook(self, result):
-        print('')
+        if not result:
+            print('Everything is ok. There is no work to do.')
+            return
         for task in result:
             print(task['title'], end=' --> ')
             color = self._verificaBordes(task['parent'], task['start'])
-            outvid = pj(self.work_dir, self.num_bookname[task['booknum']],
+            outvid = pj(self.work_dir,
+                        task['booknum'] + ' ' + self.num_bookname[task['booknum']],
                         task['title'] + ext(task['parent']))
             process = self.split_video(
                 input=task['parent'],
@@ -151,6 +149,7 @@ class JWSigns:
                 print(process.stdout, process.stderr)
         self.write_json(self.db)
 
+    # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
     def split_video(self, input, start, end, output, color=None, hwaccel=False):
         os.makedirs(os.path.dirname(output), exist_ok=True)
         cmd = [FFMPEG, '-y', '-loglevel', 'warning',
