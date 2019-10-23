@@ -145,8 +145,13 @@ class JWSigns:
             if process.returncode == 0:
                 print('done')
             else:
-                print(process.stdout, process.stderr)
-                os.remove(outvid)
+                print(process.stderr.decode('utf-8'))
+                if self.hwaccel:
+                    print('It seems that your graphics card is not compatible')
+                try:
+                    os.remove(outvid)
+                except FileNotFoundError:
+                    pass
         self.write_json(self.db)
 
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
