@@ -8,7 +8,7 @@ from jwlib.parse import JWBroadcasting
 import jwlib.output as jo
 
 
-parser = argparse.ArgumentParser(prog='jwb-index',
+parser = argparse.ArgumentParser(prog='jwb',
                                  usage='%(prog)s [options] [DIR]',
                                  description='Index or download media from tv.jw.org')
 
@@ -20,6 +20,7 @@ add_arguments(parser, ['--quiet',
                        '--burned-subtitles',
                        '--subtitles-only',
                        '--download',
+                       '--no-download',
                        '--title',
                        # '--checksum',
                        '--no-checksum',
@@ -70,7 +71,6 @@ parser.add_argument('--ntfs',
 jwb = JWBroadcasting()
 # Default values, not set by JWBroadcasting
 jwb.work_dir = '.'
-jwb.mode = None
 jwb.warn = False
 jwb.clean = False
 jwb.ntfs = False
@@ -101,7 +101,7 @@ if jwb.ntfs:
 if not mode:
     pass
 elif mode == 'stdout':
-    jo.output_stdout(r, wd, uniq=True)
+    jo.output_stdout(r, wd)
 elif mode == 'm3u':
     jo.output_m3u(r, wd, subdir)
 elif mode == 'm3ucompat':
