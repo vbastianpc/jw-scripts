@@ -95,18 +95,22 @@ class JWSigns:
 
     def parse(self):
         self.db = self._get_db()
+        print(f'Getting splited videos from {self.work_dir}... ', end='')
         verse_videos = self.get_cutup_verses()
+        print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
         if self.nwt is False:
             print('For now I can only split Bible videos')
             exit()
+        else:
+            print('done')
 
         self.num_bookname = parse_num_book(
             get_nwt_video_info(match_videos[0], 'lang'),
             self.work_dir,
             )
         add_numeration(self.work_dir, self.num_bookname)
-
+        print('Getting chapter marks from match videos... ', end='')
         result = []
         for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
@@ -122,12 +126,14 @@ class JWSigns:
                     # print('to split')
                     result.append(mark)
             self.db[woext(video)] = os.stat(video).st_size
+        print('done\n')
         return result
 
     def cook(self, result):
         if not result:
             print('Everything is ok. There is no work to do.')
             return
+        print('Splitting videos...')
         for task in result:
             print(task['title'], end=' --> ')
             color = self._verificaBordes(task['parent'], task['start'])
@@ -155,10 +161,11 @@ class JWSigns:
                 if self.hwaccel and 'cuvid' in err:
                     print('It seems that your graphics card is not compatible'
                           ', or you must install the drivers and CUDA Toolkit. '
-                          'Please visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
+                          '\nPlease visit https://github.com/vbastianpc/'
+                          'jw-scripts/wiki/jw-signs-(E)')
                     exit()
 
-        self.write_json(self.db)
+            self.write_json(self.db)
 
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
     def split_video(self, input, start, end, output, color=None, hwaccel=False):
