@@ -35,13 +35,14 @@ def output_stdout(categories, wd, uniq=False):
         for item in category.content:
             if not item.iscategory:
                 if item.file:
-                    out.append(os.path.relpath(item.file, wd))
+                    out.append([os.path.relpath(item.file, wd), item.name])
                 else:
-                    out.append(item.url)
+                    out.append([item.url, item.name])
     if uniq:
-        out = set(out)
-
-    print(*out, sep='\n')
+        pass
+        # out = set(out)
+    for r in sorted(out, key=lambda x: os.path.basename(x[0])):
+        print(*r)
 
 
 def _write_to_m3u(source, name, file):
