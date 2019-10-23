@@ -145,9 +145,12 @@ class JWSigns:
             if process.returncode == 0:
                 print('done')
             else:
-                print(process.stderr.decode('utf-8'))
-                if self.hwaccel:
-                    print('It seems that your graphics card is not compatible')
+                err = process.stderr.decode('utf-8')
+                print(err)
+                if self.hwaccel and 'cuvid' in err:
+                    print('It seems that your graphics card is not compatible'
+                          ', or you must install the drivers and CUDA Toolkit. '
+                          'Please visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
                 try:
                     os.remove(outvid)
                 except FileNotFoundError:
