@@ -6,8 +6,8 @@ from cutup.parse import JWSigns
 
 
 parser = argparse.ArgumentParser(prog='jw-signs',
-                                 usage='%(prog)s [options] [DIR]',
-                                 description='Index or download sound recordings from jw.org')
+                                 usage='%(prog)s [INPUT] [options] [DIR]',
+                                 description='Split videos Bible jw.org sign language')
 add_arguments(parser, ['--quiet',
                        '--book'])
 
@@ -30,8 +30,8 @@ jw-signs '/Users/bastianpalavecino/Desktop/vbastianpc/nwt_57_Phm_SCH_01_r480P.mp
 
 jw = JWSigns()
 parser.parse_args(namespace=jw)
-print(vars(jw))
-print(*jw.get_match_videos(), sep='\n', end='\n')
+# print(vars(jw))
+# print(*jw.get_match_videos(), sep='\n', end='\n')
 # print(*jw.get_cutup_verses(), sep='\n', end='\n')
 
 r = jw.parse()

@@ -9,7 +9,7 @@ import jwlib.output as jo
 
 parser = argparse.ArgumentParser(prog='jw-pub',
                                  usage='%(prog)s [options] [DIR]',
-                                 description='Index or download sound recordings from jw.org')
+                                 description='Index or download media publication from jw.org')
 
 parser.add_argument('pub',
                     metavar='publication code',
@@ -34,9 +34,7 @@ jw = JWPubMedia()
 
 parser.parse_args(namespace=jw)
 mode = jw.mode
-print(vars(jw))
 
-# exit()
 r = jw.parse()
 
 wd = jw.work_dir
