@@ -3,7 +3,7 @@ Este programa, que accede al sitio [JW.ORG](jw.org) por diferentes métodos, aun
 ## Todas las publicaciones multimedia de JW.ORG en un solo lugar
 Con estos scripts podrás descargar publicaciones en los principales formatos (mp4, m4v, pdf, mp4, rtf, epub, zip) en cualquier idioma disponible, incluido los lenguajes de señas. También podrás descargar los videos y subtítulos de la sección de JW Broadcasting. Además podrás cortar videos de la Biblia por versículos en lenguaje de señas.
 
-En esta [wiki](https://github.com/vbastianpc/jw-scripts/wiki) puedes obtener más información.
+En esta [wiki](https://github.com/vbastianpc/jw-scripts/wiki/Cómo-funciona) puedes obtener más información.
 
 ### ¿Es legal?
 Sí.
@@ -22,7 +22,7 @@ This program, which accesses the [JW.ORG](jw.org) site by different methods, alt
 ## All JW.ORG multimedia publications in one place
 With these scripts you can download publications in the main formats (mp4, m4v, pdf, mp4, rtf, epub, zip) in any available language, including sign languages. You can also download the videos and subtitles of the JW Broadcasting section. You can also cut Bible videos by verses in sign language.
 
-In this [wiki](https://github.com/vbastianpc/jw-scripts/wiki) you can get more information.
+In this [wiki](https://github.com/vbastianpc/jw-scripts/wiki/How-it-works) you can get more information.
 
 ### Is this legal?
 Yes.
