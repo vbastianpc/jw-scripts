@@ -121,7 +121,8 @@ def probe_markers(filename, bookname):
                 }
             )
         else:
-            print(f'No reconoci {filename}\t{t}')
+            # No match chpter verse
+            pass
     return markers
 
 
