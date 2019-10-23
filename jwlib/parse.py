@@ -500,7 +500,7 @@ class JWPubMedia(JWBroadcasting):
 def _md5(file):
     """Return MD5 of a file."""
     hash_md5 = hashlib.md5()
-    with open(file, 'rb') as f:
+    with open(file, 'rb', encoding='utf-8') as f:
         for chunk in iter(lambda: f.read(4096), b""):
             hash_md5.update(chunk)
     return hash_md5.hexdigest()
@@ -539,7 +539,7 @@ def _curl(url, file, resume=False, rate_limit='0', curl_path='curl', progress=Fa
         response = urllib.request.urlopen(request)
 
         # Write out 1MB at a time, so whole file is not lost if interrupted
-        with open(file, file_mode) as f:
+        with open(file, file_mode, encoding='utf-8') as f:
             while True:
                 chunk = response.read(1024 * 1024)
                 if not chunk:
@@ -575,7 +575,7 @@ def delete_oldest(wd, upcoming_time, quiet=0):
         msg('removing {}'.format(oldest_file))
     os.remove(oldest_file)
     # Add a "deleted" marker
-    with open(oldest_file + '.deleted', 'w') as f:
+    with open(oldest_file + '.deleted', 'w', encoding='utf-8') as f:
         f.write('')
 
 
