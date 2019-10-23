@@ -71,8 +71,11 @@ class JWBroadcasting:
                     if lang['code'] == code:
                         self.__lang = code
                         return
-
-                raise ValueError(code + ': invalid language code')
+                msg('language codes:')
+                for lang in sorted(response['languages'], key=lambda x: x['name']):
+                    msg('{:>3}  {:<}'.format(lang['code'], lang['name']))
+                print(code + ': invalid language code')
+                exit()
 
     @property
     def mindate(self):
@@ -101,9 +104,10 @@ class JWBroadcasting:
 
         # Load the queue with the requested (keynames of) categories
         queue = self.index_category.split(',')
-
+        exclude = self.exclude_category.split(',')
         for key in queue:
-
+            if key in exclude:
+                continue
             url = 'https://data.jw-api.org/mediator/v1/{s}/{L}/{c}?detailed=1&clientType=tvjworg&utcOffset={o}'
             url = url.format(s=section, L=self.lang, c=key, o=self.utc_offset)
 
@@ -420,7 +424,7 @@ class JWPubMedia(JWBroadcasting):
         # We want the languages for THAT publication only, or else the list gets SOO long
         # The language is checked on the first pub in the queue
         url = url_template.format(L='E', p=self.pub, i=queue[0], a='1')
-        print(url)
+
         with urllib.request.urlopen(url) as response:
             response = json.loads(response.read().decode())
 
@@ -430,11 +434,11 @@ class JWPubMedia(JWBroadcasting):
                 for lang in sorted(response['languages'], key=lambda x: response['languages'][x]['name']):
                     msg('{:>3}  {:<}'.format(lang, response['languages'][lang]['name']))
                 raise ValueError(self.lang + ': invalid language code')
-                exit()
+        print('Getting url...')
         bare = True
         for key in queue:
             url = url_template.format(L=self.lang, p=self.pub, i=key, a=0)
-            print('URL:', url)
+            # print('URL:', url)
             book = Category()
             self.result.append(book)
 
@@ -452,7 +456,7 @@ class JWPubMedia(JWBroadcasting):
                     book.name = response['pubName']
 
                     if self.quiet < 1:
-                        msg('{} ({})'.format(book.key, book.name))
+                        msg('{} {}'.format(book.key, book.name))
 
                     # For the Bible's index page
                     # Add all books to the queue
@@ -471,7 +475,7 @@ class JWPubMedia(JWBroadcasting):
                                     chptr['mimetype'].endswith(self.type):
                                 m = Media()
                                 m.url = chptr['file']['url']
-                                m.name = chptr['title']
+                                m.name = chptr['title'].replace('&nbsp;', ' ')
                                 m.md5 = chptr['file']['checksum']
                                 if 'filesize' in chptr:
                                     m.size = chptr['filesize']
@@ -487,6 +491,9 @@ class JWPubMedia(JWBroadcasting):
             if self.type == 'video':
                 s += f' in quality {self.quality}'
             msg(s)
+            msg(f'Check this URL: {url}')
+        else:
+            print('...done\n')
         return self.result
 
 
