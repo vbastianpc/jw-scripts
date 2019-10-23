@@ -1,51 +1,34 @@
-# JW scripts
+Este programa, que accede al sitio [JW.ORG](jw.org) por diferentes métodos, aunque es legal, no cuenta con el respaldo de la organización. Úsalos si consideras que te resulta útil. Pero primero, lee el siguiente artículo [w18.04 30-31](https://wol.jw.org/es/wol/d/r4/lp-s/2018364).
 
-*These methods of acessing tv.jw.org are, while legal, not officially supported by the organisation. Use them if you find it worth the time, pain and risk. But first, please take the time to read [w18.04 30-31](https://wol.jw.org/en/wol/d/r1/lp-e/2018364). Then consider buing a device which has official support for JW Broadcasting app. Like a Roku, Apple TV or Amazon Fire TV. It will give you a better and safer experience.*
+## Todas las publicaciones multimedia de JW.ORG en un solo lugar
+Con estos scripts podrás descargar publicaciones en los principales formatos (mp4, m4v, pdf, mp4, rtf, epub, zip) en cualquier idioma disponible, incluido los lenguajes de señas. También podrás descargar los videos y subtítulos de la sección de JW Broadcasting. Además podrás cortar videos de la Biblia por versículos en lenguaje de señas.
 
-### JW Broadcasting and sound recordings anywhere
+En esta [wiki](https://github.com/vbastianpc/jw-scripts/wiki) puedes obtener más información.
 
-With these scripts you can get the latest [JW Broadcasting](http://tv.jw.org/) videos automatically downloaded to your Plex library, or painlessly stream sound recordings of [publications at JW.ORG](https://www.jw.org/en/publications/) to your phone, or via Kodi. You can turn a Raspberry Pi into a JW streaming machine by playing the [online stream](http://tv.jw.org/#en/live/StreamingOurStudio), or automatically downloading the latest videos and playing them offline.
+### ¿Es legal?
+Sí.
 
-## Get started
+> Sin embargo, debe sujetarse a las siguientes restricciones:
+>
+> * Crear programas o herramientas informáticos o desarrollar técnicas para recopilar, copiar, descargar o extraer datos, páginas HTML, imágenes o textos de este sitio a fin de distribuirlos. **(No está prohibida la distribución de aplicaciones gratuitas y no comerciales diseñadas para descargar archivos electrónicos —como archivos EPUB, PDF, MP3 y MP4— de las secciones públicas de este sitio)**.
 
-*For Windows 10 instructions, click [here](https://github.com/allejok96/jw-scripts/wiki/Installation#installation-on-windows-10).*
+[_Términos y Condiciones de Uso_](https://www.jw.org/es/condiciones-de-uso/) 21 de Octubre de 2019
 
-Fisrt make sure to install `python-setuptools` or `python3-setuptools` depending on your distro.
+***
 
-Install the scripts
 
-    git clone https://github.com/allejok96/jw-scripts.git
-    cd jw-scripts
-    sudo python3 setup.py install
+This program, which accesses the [JW.ORG](jw.org) site by different methods, although it is legal, does not have the support of the organization. Use them if you think you find it useful. But first, read the following article [w18.04 30-31](https://wol.jw.org/en/wol/d/r1/lp-e/2018364).
 
-Next, click on one of the scripts below for more info.
+## All JW.ORG multimedia publications in one place
+With these scripts you can download publications in the main formats (mp4, m4v, pdf, mp4, rtf, epub, zip) in any available language, including sign languages. You can also download the videos and subtitles of the JW Broadcasting section. You can also cut Bible videos by verses in sign language.
 
-* [jwb-index](https://github.com/allejok96/jw-scripts/wiki/jwb-index) - Download videos from JW Broadcasting, or make playlists. Can be used together with **Plex** or **Kodi**.
-* [jwb-stream](https://github.com/allejok96/jw-scripts/wiki/jwb-stream) - Stream from JW Broadcasting in your media player of choice, like **VLC**.
-* [nwt-index](https://github.com/allejok96/jw-scripts/wiki/nwt-index) - Download Bible or publication recordings from JW.ORG, or make playlists.
-* [jwb-rpi](https://github.com/allejok96/jw-scripts/wiki/jwb-rpi) - Play downloaded videos in random order (and some more nice things).
-* [jwb-import](https://github.com/allejok96/jw-scripts/wiki/jwb-import) - Import videos from e.g. USB to use with jwb-rpi.
+In this [wiki](https://github.com/vbastianpc/jw-scripts/wiki) you can get more information.
 
-## Questions
+### Is this legal?
+Yes.
 
-#### Isn't there an easier way to watch JW Broadcasting in Kodi?
+> You may not:
+>
+> * Create for distribution purposes, any software applications, tools, or techniques that are specifically made to collect, copy, download, extract, harvest, or scrape data, HTML, images, or text from this site. **(This does not prohibit the distribution of free, non-commercial applications designed to download electronic files such as EPUB, PDF, MP3, and MP4 files from public areas of this site.)**
 
-Yes, I'm keeping an add-on alive [here](https://github.com/allejok96/plugin.video.jwb-unofficial).
-
-#### Why is the video download so slow?
-
-It seems to be realated to the `--limit-rate` flag ([why?](https://github.com/allejok96/jw-scripts/wiki/How-it-works#batch-downloading)). 
-
-*But please, somebody think of the servers!* :-)
-
-#### Is this legal?
-
-Yes. The [Terms of Service](http://www.jw.org/en/terms-of-use/) allows:
-
-> distribution of free, non-commercial applications designed to download electronic files (for example, EPUB, PDF, MP3, AAC, MOBI, and MP4 files) from public areas of this site.
-
-I've also been in contact with the Scandinavian branch office, and they have confirmed that using software like this is legal according to the ToS.
-
-#### Why doesn't this do XYZ?
-
-If you have a feature request or have been bitten by a bug, please [create an issue](https://github.com/allejok96/jw-scripts/issues), and I'll see what I can do.
+[_Terms of Use_](https://www.jw.org/en/terms-of-use/) October 21, 2019
