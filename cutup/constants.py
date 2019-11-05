@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 
 import os
-from os.path import join as pj
+import itertools
 import re
 import json
 import platform
 import ctypes
-import subprocess
+from subprocess import run
+from os.path import join as pj
 import urllib.request
 import urllib.parse
 
@@ -17,10 +18,17 @@ def msg(s):
     print(s, file=stderr, flush=True)
 
 
+def run_progress_bar(finished_event):
+    chars = itertools.cycle(r'-\|/')
+    while not finished_event.is_set():
+        print('\b' + next(chars), end='', flush=True)
+        finished_event.wait(0.2)
+    print('\b ', end='')
+
 def parse_num_book(lang, work_dir):
     dir_file = pj(work_dir, f'lang-{lang}.json')
     if os.path.exists(dir_file):
-        with open(dir_file, 'r') as json_file:
+        with open(dir_file, 'r', encoding='utf-8') as json_file:
             return json.load(json_file)
     else:
         url_template = 'https://apps.jw.org/GETPUBMEDIALINKS' \
@@ -52,28 +60,14 @@ def attrib_hidden(dir):
     if platform.system() == 'Windows':
         ctypes.windll.kernel32.SetFileAttributesW(dir, 0x02)
     elif platform.system() == 'Darwin':
-        subprocess.run(['chflags', 'hidden', dir], capture_output=True)
+        run(['chflags', 'hidden', dir], capture_output=True)
 
 
-FFPROBE = os.path.join(os.getcwd(), 'ffprobe')
-FFMPEG = os.path.join(os.getcwd(), 'ffmpeg')
+# FFPROBE = os.path.join(os.getcwd(), 'ffprobe')
+# FFMPEG = os.path.join(os.getcwd(), 'ffmpeg')
 
 FFPROBE = 'ffprobe'
 FFMPEG = 'ffmpeg'
-
-
-def terminal(args):
-    if platform.system() == 'Windows':
-        sh = True
-    else:
-        sh = False
-    sp = subprocess.Popen(args,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.PIPE,
-                          shell=sh,
-                          )
-    out, err = sp.communicate()
-    return sp.returncode, out, err
 
 
 def ext(filename):
@@ -96,12 +90,12 @@ def probe_markers(filename, bookname):
         },
     ]
     """
-    returncode, capsjson, err = terminal(
-        [FFPROBE, '-v', 'quiet', '-show_chapters',
-         '-print_format', 'json', filename]
-        )
-    if returncode == 0:
-        raw = json.loads(capsjson)['chapters']
+    console = run([FFPROBE, '-v', 'quiet', '-show_chapters',
+                   '-print_format', 'json', filename
+                   ],
+                  capture_output=True)
+    if console.returncode == 0:
+        raw = json.loads(console.stdout.decode('utf-8'))['chapters']
     else:
         print(f'error {filename}')
         return []
@@ -171,15 +165,16 @@ def get_chptr_verse(raw_title):
 def probe_general(video):
     cmd_probe_general = [FFPROBE, '-v', 'quiet', '-show_format',
                          '-print_format', 'json', video]
-    generaljson = terminal(cmd_probe_general)[1]
-    return json.loads(generaljson)
+    console = run(cmd_probe_general, capture_output=True)
+    return json.loads(console.stdout.decode('utf-8'))
 
 
 def ffprobe_height(video):
     cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'stream=height',  '-of',
            'default=noprint_wrappers=1:nokey=1', '-select_streams', 'v:0',
            video]
-    height = terminal(cmd)[1]
+    console = run(cmd, capture_output=True)
+    height = console.stdout.decode('utf-8')
     try:
         return int(height)
     except ValueError:
