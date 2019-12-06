@@ -10,7 +10,8 @@ from io import UnsupportedOperation
 from json.decoder import JSONDecodeError
 
 from cutup.constants import (
-    FFMPEG, probe_markers, ext, woext, parse_num_book, attrib_hidden,
+    FFMPEG, probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
+    parse_num_book, attrib_hidden,
     get_nwt_video_info, add_numeration, ffprobe_height, run_progress_bar
 )
 
@@ -38,9 +39,10 @@ class JWSigns:
     """
     nwt = None
     book = 0
-    input = None
+    input = ''
     work_dir = '.'
     hwaccel = False
+    raw = False
 
     def __init__(self):
         pass
@@ -95,17 +97,39 @@ class JWSigns:
                                           pj(dirpath, filename))
         return versiculos
 
+
+    def raw_parse(self):
+        """Parsing any video"""
+        self.db = self._get_db()
+        result = []
+        match_videos = self.get_match_videos()
+        verse_videos = self.get_cutup_verses()
+        for video in match_videos:
+            json_markers = probe_markers(video)
+            markers = parse_markers_raw(json_markers, video)
+
+            for mark in markers:
+                # print(mark['title'], end='\t')
+                print(verse_videos.get(mark['title']), mark['title'])
+                if self.db.get(woext(video)) == os.stat(video).st_size and \
+                        verse_videos.get(mark['title']):
+                    pass
+                else:
+                    result.append(mark)
+            self.db[woext(video)] = os.stat(video).st_size
+        self.write_json(self.db)
+        print('raw', verse_videos)
+        return result
+
+
     def parse(self):
+        """Parsing nwt videos"""
         self.db = self._get_db()
         print(f'Getting splited videos from {self.work_dir}... ', end='')
         verse_videos = self.get_cutup_verses()
         print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
-        if self.nwt is False:
-            print('For now I can only split Bible videos')
-            exit(1)
-        else:
-            print('done')
+        print('done')
 
         self.num_bookname = parse_num_book(
             get_nwt_video_info(match_videos[0], 'lang'),
@@ -116,7 +140,10 @@ class JWSigns:
         result = []
         for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
-            markers = probe_markers(video, bookname=self.num_bookname[booknum])
+            json_markers = probe_markers(video)
+            markers = parse_markers_nwt(json_markers,
+                                        video,
+                                        bookname=self.num_bookname[booknum])
             for mark in markers:
                 # print(mark['title'], end='\t')
                 if self.db.get(woext(video)) == os.stat(video).st_size and \
@@ -125,9 +152,9 @@ class JWSigns:
                     pass
                     # print('already exists')
                 else:
-                    # print('to split')
                     result.append(mark)
             self.db[woext(video)] = os.stat(video).st_size
+        self.write_json(self.db)
         print('done\n')
         return result
 
@@ -137,12 +164,19 @@ class JWSigns:
             return
         print('Splitting videos...')
         total = len(result)
+        format_spec = f'0{len(str(total))}'
         for i, task in enumerate(result, start=1):
-            print(f'[{i}/{total}]\t', task['title'], end='\t-->\t', flush=True)
-            color = self._verificaBordes(task['parent'], task['start'])
-            outvid = pj(self.work_dir,
-                        task['booknum'] + ' ' + self.num_bookname[task['booknum']],
-                        task['title'] + ext(task['parent']))
+            print(f'[{format(i, format_spec)}/{total}]\t', task['title'], end='\t-->\t', flush=True)
+            if self.raw is True:
+                color = False
+                outvid = pj(self.work_dir,
+                            f"{format(i, '02')} {task['title']}{ext(task['parent'])}")
+            else:
+                color = self._verificaBordes(task['parent'], task['start'])
+                outvid = pj(self.work_dir,
+                            task['booknum'] + ' ' + self.num_bookname[task['booknum']],
+                            task['title'] + ext(task['parent']))
+
             self.finished_event = threading.Event()
             progress_bar_thread = threading.Thread(target=run_progress_bar, args=(self.finished_event,))
             progress_bar_thread.start()
@@ -159,8 +193,6 @@ class JWSigns:
             if process.returncode == 0:
                 print('done')
 
-            self.write_json(self.db)
-
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
     def split_video(self, input, start, end, output, color=None, hwaccel=False):
         os.makedirs(os.path.dirname(output), exist_ok=True)
@@ -170,7 +202,7 @@ class JWSigns:
             cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
         cmd += ['-i', input, '-to', str(end - start),
                 '-map_chapters', '-1', '-metadata', 'title=',
-                '-metadata', 'comment=Created by vbastianpc']
+                '-metadata', 'comment=Created by vbastianpc\n\nhttps://github.com/vbastianpc']
         if color:
             height = self.current_height
             delta = int(height * 4 / 3 * 0.02)  # 2% security
@@ -182,15 +214,20 @@ class JWSigns:
                 )
             # print(vf)
             cmd += ['-vf', vf]
-        if hwaccel:
-            cmd += ['-c:v', 'h264_nvenc']
-        cmd += ['-f', ext(output)[1:], output + '.part']
+        if hwaccel and not color:
+            cmd += ['-c:v', 'h264_nvenc', '-preset', 'slow', '-b:v', '1000k']
+        cmd += ['-f', 'mp4', output + '.part']
 
         # print(' '.join(cmd))
         # https://superuser.com/questions/1320389/updating-mp4-chapter-times-and-names-with-ffmpeg
         console = run(cmd, capture_output=True)
         if console.returncode == 0:
+            try:
+                os.remove(output)
+            except FileNotFoundError:
+                pass
             os.rename(output + '.part', output)
+
         else:
             try:
                 os.remove(output + '.part')
@@ -221,7 +258,7 @@ class JWSigns:
             rgb = img.getpixel((20, 20))
 
             if rgb == (0, 0, 0):
-                delta = int(self.current_height * 4 / 3 * 0.03)  # 3% security
+                delta = int(self.current_height * 4 / 3 * 0.03)  # 3% safe bandwith
                 x = int((self.current_height * 16 / 9 - self.current_height * 4 / 3) / 2) + delta
                 y = int(self.current_height / 2)
                 r, g, b = img.getpixel((x, y))

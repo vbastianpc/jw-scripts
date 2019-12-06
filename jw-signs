@@ -21,6 +21,9 @@ parser.add_argument('--hwaccel',
 parser.add_argument('work_dir',
                     metavar='OUTPUT DIR',
                     help='directory to save data in')
+parser.add_argument('--raw',
+                    action='store_true',
+                    help='split videos without name parsing mark chapters')
 
 """
 jw-signs '/Users/bastianpalavecino/Desktop/nwt-LSCH Descargas' '/Users/bastianpalavecino/Desktop/cortes'
@@ -36,7 +39,10 @@ parser.parse_args(namespace=jw)
 # print(*jw.get_cutup_verses(), sep='\n', end='\n')
 
 try:
-    r = jw.parse()
+    if jw.raw:
+        r = jw.raw_parse()
+    else:
+        r = jw.parse()
     jw.cook(r)
 except KeyboardInterrupt:
     if hasattr(jw, 'finished_event'):

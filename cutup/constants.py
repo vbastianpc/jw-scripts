@@ -78,8 +78,39 @@ def woext(filename):
     return os.path.splitext(os.path.basename(filename))[0]
 
 
-def probe_markers(filename, bookname):
-    """Returns markers (chapters) from video
+def probe_markers(filename):
+    """
+    Returns markers (chapters) from filename with ffprobe
+    """
+    console = run([FFPROBE, '-v', 'quiet', '-show_chapters',
+                   '-print_format', 'json', filename
+                   ],
+                  capture_output=True)
+    if console.returncode == 0:
+        return json.loads(console.stdout.decode('utf-8'))['chapters']
+    else:
+        print(f'error {filename}')
+        return []
+
+
+def parse_markers_raw(markers, filename):
+    result = []
+    for data in markers:
+        raw_title = data['tags']['title'].rstrip('\r').rstrip()
+        title = ''.join([c if c.isalnum() or c in ' .-' else ' ' for c in raw_title]).strip()
+        result.append(
+            {
+                'parent': filename,
+                'title': title,
+                'start': float(data['start_time']),
+                'end': float(data['end_time']),
+            }
+        )
+    return result
+
+
+def parse_markers_nwt(markers, filename, bookname):
+    """
     [
         {
             'parent': filename,
@@ -90,22 +121,12 @@ def probe_markers(filename, bookname):
         },
     ]
     """
-    console = run([FFPROBE, '-v', 'quiet', '-show_chapters',
-                   '-print_format', 'json', filename
-                   ],
-                  capture_output=True)
-    if console.returncode == 0:
-        raw = json.loads(console.stdout.decode('utf-8'))['chapters']
-    else:
-        print(f'error {filename}')
-        return []
-
-    markers = []
-    for data in raw:
-        t = data['tags']['title'].rstrip('\r').rstrip()
-        chptr_verse = get_chptr_verse(t)
+    result = []
+    for data in markers:
+        raw_title = data['tags']['title'].rstrip('\r').rstrip()
+        chptr_verse = get_chptr_verse(raw_title)
         if chptr_verse:
-            markers.append(
+            result.append(
                 {
                     'parent': filename,
                     'title': f'{bookname} {chptr_verse}',
@@ -117,19 +138,18 @@ def probe_markers(filename, bookname):
         else:
             # No match chpter verse
             pass
-    return markers
-
+    return result
 
 def get_nwt_video_info(filename, info):
     if info == 'booknum':
-        answer = os.path.basename(filename).split('_')[1]
+        result = os.path.basename(filename).split('_')[1]
     elif info == 'bookalias':
-        answer = os.path.basename(filename).split('_')[2]
+        result = os.path.basename(filename).split('_')[2]
     elif info == 'lang':
-        answer = os.path.basename(filename).split('_')[3]
+        result = os.path.basename(filename).split('_')[3]
     elif info == 'chapter':
-        answer = os.path.basename(filename).split('_')[4]
-    return answer
+        result = os.path.basename(filename).split('_')[4]
+    return result
 
 
 def get_chptr_verse(raw_title):
