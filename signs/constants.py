@@ -25,8 +25,11 @@ def run_progress_bar(finished_event):
         finished_event.wait(0.2)
     print('\b ', end='')
 
-def parse_num_book(lang, work_dir):
-    dir_file = pj(work_dir, f'lang-{lang}.json')
+def parse_num_book(lang):
+    dir_file = pj(
+        os.path.dirname(os.path.realpath(__file__)),
+        'languages',
+        f'lang-{lang}.json')
     if os.path.exists(dir_file):
         with open(dir_file, 'r', encoding='utf-8') as json_file:
             return json.load(json_file)
@@ -52,7 +55,6 @@ def parse_num_book(lang, work_dir):
 
         with open(dir_file, 'w', encoding='utf-8') as json_file:
             json.dump(num_book, json_file, ensure_ascii=False, indent=4)
-        attrib_hidden(dir_file)
         return num_book
 
 
@@ -171,6 +173,8 @@ def get_chptr_verse(raw_title):
         Luc. 17:36 nota           |   None
         1 Corintios               |   None
     """
+    if any(char in raw_title for char in '*#'):
+        return
     match = re.search(r'((\d+)?:?\d+)$', raw_title)
     if match:
         try:

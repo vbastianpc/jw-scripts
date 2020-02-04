@@ -9,7 +9,7 @@ from os.path import join as pj
 from io import UnsupportedOperation
 from json.decoder import JSONDecodeError
 
-from cutup.constants import (
+from signs.constants import (
     FFMPEG, probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
     parse_num_book, attrib_hidden,
     get_nwt_video_info, add_numeration, ffprobe_height, run_progress_bar
@@ -131,10 +131,7 @@ class JWSigns:
         match_videos = self.get_match_videos()
         print('done')
 
-        self.num_bookname = parse_num_book(
-            get_nwt_video_info(match_videos[0], 'lang'),
-            self.work_dir,
-            )
+        self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
         print('Getting chapter marks from match videos... ', end='')
         result = []

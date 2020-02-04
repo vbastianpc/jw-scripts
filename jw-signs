@@ -3,7 +3,7 @@ import argparse
 import sys
 
 from jwlib.arguments import add_arguments
-from cutup.parse import JWSigns
+from signs.parse import JWSigns
 
 
 parser = argparse.ArgumentParser(prog='jw-signs',
