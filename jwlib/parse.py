@@ -163,6 +163,8 @@ class JWBroadcasting:
                             subs = self._get_subs(media['files'])
                             if 'url' in subs:
                                 m.url = subs['url']
+                            else:
+                                continue
                             if 'checksum' in subs:
                                 m.md5 = subs['checksum']
                         else:
