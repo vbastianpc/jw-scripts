@@ -1,33 +1,36 @@
 # -*- coding: utf-8 -*-
 
 import os
-from os.path import join as pj
 import json
+import threading
+import io
 from subprocess import run
-
+from os.path import join as pj
 from io import UnsupportedOperation
 from json.decoder import JSONDecodeError
 
-from cutup.constants import (
-    FFMPEG, probe_markers, ext, woext, parse_num_book, attrib_hidden,
-    get_nwt_video_info, add_numeration, ffprobe_height
+from signs.constants import (
+    FFMPEG, probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
+    parse_num_book, attrib_hidden,
+    get_nwt_video_info, add_numeration, ffprobe_height, run_progress_bar
 )
 
 
 try:
-    import imageio
+    from PIL import Image
 except ModuleNotFoundError:
-    print('Instalando librería imageio...')
-    p = run(['pip', 'install', 'imageio'], capture_output=True)
+    print('Installing Pillow package')
+    p = run(['pip', 'install', 'Pillow'], capture_output=True)
     if p.returncode == 0:
-        import imageio
+        from PIL import Image
     else:
         print(
-            'No se ha podido instalar la librería imageio. Debes instalarla '
+            'No se ha podido instalar la librería PIL. Debes instalarla '
             'manualmente.\n\nSi estás en Windows, abre el Símbolo del sistema '
-            'como administrador y ejecuta: pip install imageio\n\nSi estás en '
+            'como administrador y ejecuta: pip install PIL\n\nSi estás en '
             'macOS o Linux, abre el terminal y escribe: '
-            'sudo pip install imageio')
+            'sudo pip install PIL')
+        exit()
 
 
 class JWSigns:
@@ -36,9 +39,10 @@ class JWSigns:
     """
     nwt = None
     book = 0
-    input = None
-    work_dir = None
+    input = ''
+    work_dir = '.'
     hwaccel = False
+    raw = False
 
     def __init__(self):
         pass
@@ -49,11 +53,11 @@ class JWSigns:
         attrib_hidden(dir)
         self.dirdb = pj(dir, 'db.json')
         if not os.path.exists(self.dirdb):
-            with open(self.dirdb, 'w'):
+            with open(self.dirdb, 'w', encoding='utf-8'):
                 pass
             db = {}
         else:
-            with open(self.dirdb, 'r') as json_file:
+            with open(self.dirdb, 'r', encoding='utf-8') as json_file:
                 try:
                     db = json.load(json_file)
                 except (UnsupportedOperation, JSONDecodeError):
@@ -93,28 +97,50 @@ class JWSigns:
                                           pj(dirpath, filename))
         return versiculos
 
+
+    def raw_parse(self):
+        """Parsing any video"""
+        self.db = self._get_db()
+        result = []
+        match_videos = self.get_match_videos()
+        verse_videos = self.get_cutup_verses()
+        for video in match_videos:
+            json_markers = probe_markers(video)
+            markers = parse_markers_raw(json_markers, video)
+
+            for mark in markers:
+                # print(mark['title'], end='\t')
+                print(verse_videos.get(mark['title']), mark['title'])
+                if self.db.get(woext(video)) == os.stat(video).st_size and \
+                        verse_videos.get(mark['title']):
+                    pass
+                else:
+                    result.append(mark)
+            self.db[woext(video)] = os.stat(video).st_size
+        self.write_json(self.db)
+        print('raw', verse_videos)
+        return result
+
+
     def parse(self):
+        """Parsing nwt videos"""
         self.db = self._get_db()
         print(f'Getting splited videos from {self.work_dir}... ', end='')
         verse_videos = self.get_cutup_verses()
         print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
-        if self.nwt is False:
-            print('For now I can only split Bible videos')
-            exit()
-        else:
-            print('done')
+        print('done')
 
-        self.num_bookname = parse_num_book(
-            get_nwt_video_info(match_videos[0], 'lang'),
-            self.work_dir,
-            )
+        self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
         print('Getting chapter marks from match videos... ', end='')
         result = []
         for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
-            markers = probe_markers(video, bookname=self.num_bookname[booknum])
+            json_markers = probe_markers(video)
+            markers = parse_markers_nwt(json_markers,
+                                        video,
+                                        bookname=self.num_bookname[booknum])
             for mark in markers:
                 # print(mark['title'], end='\t')
                 if self.db.get(woext(video)) == os.stat(video).st_size and \
@@ -123,9 +149,9 @@ class JWSigns:
                     pass
                     # print('already exists')
                 else:
-                    # print('to split')
                     result.append(mark)
             self.db[woext(video)] = os.stat(video).st_size
+        self.write_json(self.db)
         print('done\n')
         return result
 
@@ -134,12 +160,23 @@ class JWSigns:
             print('Everything is ok. There is no work to do.')
             return
         print('Splitting videos...')
-        for task in result:
-            print(task['title'], end=' --> ')
-            color = self._verificaBordes(task['parent'], task['start'])
-            outvid = pj(self.work_dir,
-                        task['booknum'] + ' ' + self.num_bookname[task['booknum']],
-                        task['title'] + ext(task['parent']))
+        total = len(result)
+        format_spec = f'0{len(str(total))}'
+        for i, task in enumerate(result, start=1):
+            print(f'[{format(i, format_spec)}/{total}]\t', task['title'], end='\t-->\t', flush=True)
+            if self.raw is True:
+                color = False
+                outvid = pj(self.work_dir,
+                            f"{format(i, '02')} {task['title']}{ext(task['parent'])}")
+            else:
+                color = self._verificaBordes(task['parent'], task['start'])
+                outvid = pj(self.work_dir,
+                            task['booknum'] + ' ' + self.num_bookname[task['booknum']],
+                            task['title'] + ext(task['parent']))
+
+            self.finished_event = threading.Event()
+            progress_bar_thread = threading.Thread(target=run_progress_bar, args=(self.finished_event,))
+            progress_bar_thread.start()
             process = self.split_video(
                 input=task['parent'],
                 start=task['start'],
@@ -148,24 +185,10 @@ class JWSigns:
                 color=color,
                 hwaccel=self.hwaccel,
                 )
+            self.finished_event.set()
+            progress_bar_thread.join()
             if process.returncode == 0:
                 print('done')
-            else:
-                try:
-                    os.remove(outvid)
-                except FileNotFoundError:
-                    pass
-
-                err = process.stderr.decode('utf-8')
-                print(err)
-                if self.hwaccel and 'cuvid' in err:
-                    print('It seems that your graphics card is not compatible'
-                          ', or you must install the drivers and CUDA Toolkit. '
-                          '\nPlease visit https://github.com/vbastianpc/'
-                          'jw-scripts/wiki/jw-signs-(E)')
-                    exit()
-
-            self.write_json(self.db)
 
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
     def split_video(self, input, start, end, output, color=None, hwaccel=False):
@@ -176,7 +199,7 @@ class JWSigns:
             cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
         cmd += ['-i', input, '-to', str(end - start),
                 '-map_chapters', '-1', '-metadata', 'title=',
-                '-metadata', 'comment=Created by vbastianpc']
+                '-metadata', 'comment=Created by vbastianpc\n\nhttps://github.com/vbastianpc']
         if color:
             height = self.current_height
             delta = int(height * 4 / 3 * 0.02)  # 2% security
@@ -186,47 +209,64 @@ class JWSigns:
                 f'drawbox=x=0:y=0:w={width_bar}:h={height}:color={color[0]}:t=fill, '
                 f'drawbox=x={x_offset}:y=0:w={width_bar}:h={height}:color={color[1]}:t=fill'
                 )
-            print(vf)
+            # print(vf)
             cmd += ['-vf', vf]
-        if hwaccel:
-            cmd += ['-c:v', 'h264_nvenc']
-        cmd += [output]
+        if hwaccel and not color:
+            cmd += ['-c:v', 'h264_nvenc', '-preset', 'slow', '-b:v', '1000k']
+        cmd += ['-f', 'mp4', output + '.part']
 
         # print(' '.join(cmd))
         # https://superuser.com/questions/1320389/updating-mp4-chapter-times-and-names-with-ffmpeg
-        return run(cmd, capture_output=True)
+        console = run(cmd, capture_output=True)
+        if console.returncode == 0:
+            try:
+                os.remove(output)
+            except FileNotFoundError:
+                pass
+            os.rename(output + '.part', output)
+
+        else:
+            try:
+                os.remove(output + '.part')
+            except FileNotFoundError:
+                pass
+
+            err = console.stderr.decode('utf-8')
+            print(err)
+            if self.hwaccel and 'cuvid' in err:
+                print('It seems that your graphics card is not compatible'
+                      ', or you must install the drivers and CUDA Toolkit. '
+                      '\nPlease visit https://github.com/vbastianpc/'
+                      'jw-scripts/wiki/jw-signs-(E)')
+                exit(1)
+
+        return console
 
     def _verificaBordes(self, dir_file, start):
-        ruta = os.path.dirname(dir_file)
-        snapshot = os.path.join(ruta, dir_file + '.jpg')
-        cmd = [FFMPEG,
-               '-y', '-hide_banner',
-               '-ss', str(start + 0.5),
-               '-i', dir_file,
-               '-vframes', '1',
-               snapshot]
-        run(cmd, capture_output=True)
-        self.current_height = ffprobe_height(dir_file)
+        cmd = [FFMPEG, '-y', '-hide_banner', '-ss', str(start + 0.5),
+               '-i', dir_file, '-vframes', '1', '-f', 'image2pipe', '-']
+        console = run(cmd, capture_output=True)
         try:
-            im = imageio.imread(snapshot)
-        except OSError:
+            img = Image.open(io.BytesIO(console.stdout))
+        except:
             return None
         else:
-            rgb = tuple(im[20][20])
+            self.current_height = ffprobe_height(dir_file)
+            rgb = img.getpixel((20, 20))
+
             if rgb == (0, 0, 0):
-                delta = int(self.current_height * 4 / 3 * 0.03)  # 3% security
+                delta = int(self.current_height * 4 / 3 * 0.03)  # 3% safe bandwith
                 x = int((self.current_height * 16 / 9 - self.current_height * 4 / 3) / 2) + delta
                 y = int(self.current_height / 2)
-                r, g, b = im[y][x]
+                r, g, b = img.getpixel((x, y))
                 colorleft = format(r, '02X') + format(g, '02X') + format(b, '02X')
 
                 x = int(self.current_height * 16 / 9) - x
-                r, g, b = im[y][x]
+                r, g, b = img.getpixel((x, y))
                 colorright = format(r, '02X') + format(g, '02X') + format(b, '02X')
                 color = (colorleft, colorright)
             else:
                 color = False
-            os.remove(snapshot)
             return color
 
     def write_json(self, data):
