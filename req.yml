@@ -1,0 +1,9 @@
+name: base
+dependencies:
+  - python
+  - ffmpeg
+  - curl
+  - git
+  - pip
+  - pip:
+    - Pillow
