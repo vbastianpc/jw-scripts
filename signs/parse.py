@@ -11,7 +11,7 @@ from json.decoder import JSONDecodeError
 
 from signs.constants import (
     FFMPEG, probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
-    parse_num_book, attrib_hidden,
+    parse_num_book, attrib_hidden, ffprobe_signature,
     get_nwt_video_info, add_numeration, ffprobe_height, run_progress_bar
 )
 
@@ -37,7 +37,7 @@ class JWSigns:
     """
     Clase
     """
-    nwt = None
+    nwt = True
     book = 0
     input = ''
     work_dir = '.'
@@ -70,6 +70,7 @@ class JWSigns:
         elif os.path.isdir(self.input):
             videos = []
             for dirpath, dirnames, filenames in os.walk(self.input):
+                print(dirpath, sorted(filenames))
                 for filename in sorted(filenames):
                     if filename.endswith('.mp4') or filename.endswith('.m4v'):
 
@@ -82,6 +83,8 @@ class JWSigns:
 
                         elif self.nwt is False and not filename.startswith('nwt'):
                             videos.append(pj(dirpath, filename))
+                # not entry in subdirs
+                break
 
             return videos
         else:
@@ -93,8 +96,9 @@ class JWSigns:
             for filename in filenames:
                 if filename.endswith('.mp4') or filename.endswith('.m4v') \
                         and not filename.startswith('nwt'):
-                    versiculos.setdefault(woext(filename),
-                                          pj(dirpath, filename))
+                    if ffprobe_signature(pj(dirpath, filename)) == 'vbastianpc':
+                        versiculos.setdefault(woext(filename),
+                                              pj(dirpath, filename))
         return versiculos
 
 
@@ -125,12 +129,12 @@ class JWSigns:
     def parse(self):
         """Parsing nwt videos"""
         self.db = self._get_db()
-        print(f'Getting splited videos from {self.work_dir}... ', end='')
+        print(f'Getting splited videos from {self.work_dir}... ', flush=True)
+        print('This may take several minutes', flush=True)
         verse_videos = self.get_cutup_verses()
+        # [print(x) for x in verse_videos]
         print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
-        print('done')
-
         self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
         print('Getting chapter marks from match videos... ', end='')
@@ -198,8 +202,11 @@ class JWSigns:
         if hwaccel:
             cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
         cmd += ['-i', input, '-to', str(end - start),
-                '-map_chapters', '-1', '-metadata', 'title=',
-                '-metadata', 'comment=Created by vbastianpc\n\nhttps://github.com/vbastianpc']
+                '-map_chapters', '-1',
+                # TODO make map_chapters test if join video
+                '-metadata', 'title=',
+                '-metadata', 'genre=vbastianpc'
+                '-metadata', 'comment=https://github.com/vbastianpc/jw-scripts']
         if color:
             height = self.current_height
             delta = int(height * 4 / 3 * 0.02)  # 2% security
