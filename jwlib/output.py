@@ -41,8 +41,9 @@ def output_stdout(categories, wd, uniq=False):
     if uniq:
         pass
         # out = set(out)
-    for r in sorted(out, key=lambda x: os.path.basename(x[0])):
-        print(*r)
+    sort = sorted(out, key=lambda x: os.path.basename(x[0]))
+    for i, file_name in enumerate(sort):
+        print(f'[{i}/{len(sort)}] {file_name[1]}\t{file_name[0]}')
 
 
 def _write_to_m3u(source, name, file):

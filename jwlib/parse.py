@@ -279,7 +279,7 @@ class JWBroadcasting:
                             msg('checksum mismatch, deleting: {}'.format(base))
                         os.remove(file)
                     else:
-                        # Checksum is correct or unknown
+                        # Checksum is correct
                         return file
                 else:
                     # File size is bad - Delete
@@ -343,7 +343,7 @@ class JWBroadcasting:
 
 
     def prepare_download(self, wd=None):
-        """Download/check media files
+        """Check media files
 
         :param wd: directory where files will be saved
         """
@@ -360,7 +360,7 @@ class JWBroadcasting:
         # Trim down the list of files that need to be downloaded
         download_list = []
         checked_files = []
-
+        no_download_list = []
         for media in media_list:
             if not media.url:
                 continue
@@ -383,15 +383,17 @@ class JWBroadcasting:
 
             if not media.file:
                 download_list.append(media)
+            else:
+                no_download_list.append(media)
 
-        if not self.download:
-            return
-        else:
-            self.download_list = download_list
-            return download_list
+        self.download_list = download_list
+        self.checked_files = checked_files
+        self.no_download_list = no_download_list
+        return download_list
 
 
     def manage_downloads(self, wd=None, download_list=None):
+
         if download_list is None:
             download_list = self.download_list
         if wd is None:
@@ -406,12 +408,13 @@ class JWBroadcasting:
                     'Free space: {:} MiB, needed: {:} MiB'.format(space//1024**2, needed//1024**2)
                 raise Exception(s)
             # Download the video
-            print('[{}/{}]'.format(download_list.index(media) + 1, len(download_list)), end=' ', file=stderr)
-            media.file = self.download_media(media, wd)
+            if self.download:
+                print('[{}/{}]'.format(download_list.index(media) + 1, len(download_list)), end=' ', file=stderr)
+                media.file = self.download_media(media, wd)
 
 
 class JWPubMedia(JWBroadcasting):
-    pub = 'bi12'
+    type = 'video'
     book = 0
     # Disable rate limit completely
     rate_limit = '0'
