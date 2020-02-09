@@ -132,9 +132,10 @@ class JWSigns:
         print(f'Getting splited videos from {self.work_dir}... ', flush=True)
         print('This may take several minutes', flush=True)
         verse_videos = self.get_cutup_verses()
-        # [print(x) for x in verse_videos]
+        [print(x) for x in verse_videos]
         print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
+        [print(x) for x in match_videos]
         self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
         print('Getting chapter marks from match videos... ', end='')
@@ -205,7 +206,7 @@ class JWSigns:
                 '-map_chapters', '-1',
                 # TODO make map_chapters test if join video
                 '-metadata', 'title=',
-                '-metadata', 'genre=vbastianpc'
+                '-metadata', 'genre=vbastianpc',
                 '-metadata', 'comment=https://github.com/vbastianpc/jw-scripts']
         if color:
             height = self.current_height

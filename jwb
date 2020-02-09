@@ -11,6 +11,9 @@ import jwlib.output as jo
 parser = argparse.ArgumentParser(prog='jwb',
                                  usage='%(prog)s [options] [DIR]',
                                  description='Index or download media from tv.jw.org')
+parser.add_argument('--type',
+                    default='video',
+                    choices=['video'])
 
 # The commented out options would only be valid with a --config file
 add_arguments(parser, ['--quiet',
@@ -24,8 +27,6 @@ add_arguments(parser, ['--quiet',
                        '--title',
                        # '--checksum',
                        '--no-checksum',
-                       '--no-warning',
-                       '--free',
                        'work_dir'])
 # TODO
 # parser.add_argument('--config')
@@ -50,25 +51,9 @@ parser.add_argument('--limit-rate',
                     default='1M',
                     dest='rate_limit',
                     help='maximum download rate, passed to curl (0 = no limit)')
-parser.add_argument('--curl-path',
-                    default='curl',
-                    metavar='PATH',
-                    help='path to the curl binary')
-parser.add_argument('--no-curl',
-                    action='store_const',
-                    const=None,
-                    dest='curl_path',
-                    help='use urllib instead of external curl (compatibility)')
-parser.add_argument('--clean-symlinks',
-                    dest='clean',
-                    action='store_true',
-                    help='remove all old symlinks (only valid with --mode=filesystem)')
-parser.add_argument('--ntfs',
-                    dest='ntfs',
-                    action='store_true',
-                    help='remove special characters from file names (NTFS/FAT compatibility)')
 
 jwb = JWBroadcasting()
+
 # Default values, not set by JWBroadcasting
 jwb.work_dir = '.'
 jwb.warn = False
@@ -78,36 +63,13 @@ jwb.exclude_category = 'VODSJJMeetings'
 parser.parse_args(namespace=jwb)
 
 wd = jwb.work_dir
-subdir = 'jwb-' + jwb.lang
-mode = jwb.mode
-
-if not mode and not jwb.download:
-    print('please use --mode or --download', file=stderr)
-    exit(1)
-
-if not mode or mode == 'stdout':
-    subdir = ''
-
-if jwb.keep_free and jwb.keep_free > 0:
-    jwb.keep_free = jwb.keep_free * 1024 ** 2  # MiB to B
-    disk_usage_info(wd, jwb.keep_free, warn=jwb.warn, quiet=jwb.quiet)
-
+print('type', jwb.type)
 r = jwb.parse()
-jwb.download_all(os.path.join(wd, subdir))
 
-if jwb.ntfs:
-    jo.SAFE_FILE_NAMES = True
+jwb.prepare_download()
+jwb.manage_downloads()
 
-if not mode:
-    pass
-elif mode == 'stdout':
+# jwb.download_all(os.path.join(wd, subdir))
+
+if not jwb.download:
     jo.output_stdout(r, wd)
-elif mode == 'm3u':
-    jo.output_m3u(r, wd, subdir)
-elif mode == 'm3ucompat':
-    jo.output_m3u(r, wd, subdir, flat=True)
-elif mode == 'filesystem':
-    jo.clean_symlinks(os.path.join(wd, subdir), quiet=jwb.quiet, clean_all=jwb.clean)
-    jo.output_filesystem(r, wd, subdir)
-elif mode == 'html':
-    jo.output_html(r, wd, subdir)

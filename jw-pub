@@ -43,5 +43,5 @@ subdir = jw.pub + '-' + jw.lang
 jw.prepare_download()
 jw.manage_downloads()
 
-if jw.mode == 'stdout':
+if not jw.download:
     jo.output_stdout(r, wd)
