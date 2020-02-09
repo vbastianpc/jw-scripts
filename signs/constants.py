@@ -52,7 +52,7 @@ def parse_num_book(lang):
                     exit()
                 num_book.setdefault(format(i, '02'), response['pubName'])
                 print(format(i, '02'), response['pubName'])
-
+        os.makedirs(os.path.dirname(dir_file), exist_ok=True)
         with open(dir_file, 'w', encoding='utf-8') as json_file:
             json.dump(num_book, json_file, ensure_ascii=False, indent=4)
         return num_book
@@ -143,15 +143,19 @@ def parse_markers_nwt(markers, filename, bookname):
     return result
 
 def get_nwt_video_info(filename, info):
-    if info == 'booknum':
-        result = os.path.basename(filename).split('_')[1]
-    elif info == 'bookalias':
-        result = os.path.basename(filename).split('_')[2]
-    elif info == 'lang':
-        result = os.path.basename(filename).split('_')[3]
-    elif info == 'chapter':
-        result = os.path.basename(filename).split('_')[4]
-    return result
+    try:
+        if info == 'booknum':
+            result = os.path.basename(filename).split('_')[1]
+        elif info == 'bookalias':
+            result = os.path.basename(filename).split('_')[2]
+        elif info == 'lang':
+            result = os.path.basename(filename).split('_')[3]
+        elif info == 'chapter':
+            result = os.path.basename(filename).split('_')[4]
+    except IndexError:
+        return False
+    else:
+        return result
 
 
 def get_chptr_verse(raw_title):
@@ -192,6 +196,12 @@ def probe_general(video):
     console = run(cmd_probe_general, capture_output=True)
     return json.loads(console.stdout.decode('utf-8'))
 
+
+def ffprobe_signature(video):
+    cmd = [FFPROBE, '-v', 'error', '-show_entries', 'format_tags=genre',
+           '-of', 'default=noprint_wrappers=1:nokey=1', video]
+    console = run(cmd, capture_output=True)
+    return console.stdout.decode('utf-8').strip()
 
 def ffprobe_height(video):
     cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'stream=height',  '-of',
