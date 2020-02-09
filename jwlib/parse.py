@@ -10,6 +10,7 @@ import hashlib
 import urllib.request
 import urllib.parse
 
+from signs.constants import woext, ext
 
 def msg(s):
     print(s, file=stderr, flush=True)
@@ -244,15 +245,25 @@ class JWBroadcasting:
                            ) + file_extension
         else:
             base = os.path.basename(base)
-        file = os.path.join(directory, base)
 
+        # Delete files if same basename in main dir
+        if self.type == 'video':
+            for path, dirnames, filenames in os.walk(directory):
+                for filename in filenames:
+                    if filename == base:
+                        pass
+                    elif woext(filename) == woext(base):
+                        os.remove(os.path.join(path, filename))
+                        print('deleted:', os.path.join(path, filename))
+                break
+        file = os.path.join(directory, base)
         # Only try resuming and downloading once
         resumed = False
         downloaded = False
-        progressbar = False if self.subtitles else self.quiet < 1
+        progressbar = False if self.subtitles else True
         while True:
 
-            if os.path.exists(file):
+            if os.path.exists(file): # os.path.exists(file):
 
                 # Set timestamp to date of publishing
                 # NOTE: Do this before checking _checked_files since
@@ -272,12 +283,12 @@ class JWBroadcasting:
                         return file
                 else:
                     # File size is bad - Delete
-                    if self.quiet < 2:
-                        msg('size mismatch, deleting: {}'.format(base + '.part'))
+                    msg('size mismatch, deleting: {}'.format(base))
                     os.remove(file)
 
             elif check_only:
                 # The rest of this method is only applicable in download mode
+
                 return None
 
             elif os.path.exists(file + '.part'):
@@ -309,15 +320,13 @@ class JWBroadcasting:
                           )
                 else:
                     # File size is bad - Remove
-                    if self.quiet < 2:
-                        msg('size mismatch, deleting: {}'.format(base + '.part'))
+                    msg('size mismatch, deleting: {}'.format(base + '.part'))
                     os.remove(file + '.part')
 
             else:
                 # Download whole file once
                 if not downloaded:
-                    if self.quiet < 2:
-                        msg('downloading: {} ({})'.format(base, media.name))
+                    msg('downloading: {} ({})'.format(base, media.name))
                     _curl(media.url,
                           file + '.part',
                           rate_limit=self.rate_limit,
@@ -329,15 +338,18 @@ class JWBroadcasting:
                     # If we get here, all tests have failed.
                     # Resume and regular download too.
                     # There is nothing left to do.
-                    if self.quiet < 2:
-                        msg('failed to download: {} ({})'.format(base, media.name))
+                    msg('failed to download: {} ({})'.format(base, media.name))
                     return None
 
-    def download_all(self, wd):
+
+    def prepare_download(self, wd=None):
         """Download/check media files
 
         :param wd: directory where files will be saved
         """
+        if wd is None:
+            wd = self.work_dir
+
         exclude = self.exclude_category.split(',')
         media_list = [x for cat in self.result
                       if cat.key not in exclude or cat.home
@@ -353,8 +365,8 @@ class JWBroadcasting:
             if not media.url:
                 continue
             # Only run this check once per filename
-            base = urllib.parse.urlparse(media.url).path
-            base = os.path.basename(base)
+            path = urllib.parse.urlparse(media.url).path
+            base = os.path.basename(path)
             if base in checked_files:
                 continue
             checked_files.append(base)
@@ -374,23 +386,27 @@ class JWBroadcasting:
 
         if not self.download:
             return
+        else:
+            self.download_list = download_list
+            return download_list
 
-        # Download all files
+
+    def manage_downloads(self, wd=None, download_list=None):
+        if download_list is None:
+            download_list = self.download_list
+        if wd is None:
+            wd = self.work_dir
+
         for media in download_list:
-
             # Clean up until there is enough space
-            while self.keep_free > 0:
-                space = shutil.disk_usage(wd).free
-                needed = media.size + self.keep_free
-                if space > needed:
-                    break
-                if self.quiet < 1:
-                    msg('free space: {:} MiB, needed: {:} MiB'.format(space//1024**2, needed//1024**2))
-                delete_oldest(wd, media.date, self.quiet)
-
+            space = shutil.disk_usage(wd).free
+            needed = media.size + self.keep_free
+            if space < needed:
+                s = 'Please, free up hard disk space\n' \
+                    'Free space: {:} MiB, needed: {:} MiB'.format(space//1024**2, needed//1024**2)
+                raise Exception(s)
             # Download the video
-            if self.quiet < 2:
-                print('[{}/{}]'.format(download_list.index(media) + 1, len(download_list)), end=' ', file=stderr)
+            print('[{}/{}]'.format(download_list.index(media) + 1, len(download_list)), end=' ', file=stderr)
             media.file = self.download_media(media, wd)
 
 
@@ -547,38 +563,6 @@ def _curl(url, file, resume=False, rate_limit='0', curl_path='curl', progress=Fa
                 if not chunk:
                     break
                 f.write(chunk)
-
-
-def delete_oldest(wd, upcoming_time, quiet=0):
-    """Delete the oldest .mp4 file in the work_dir
-
-    Exit if oldest video is newer than or equal to :param:`upcoming_time`.
-
-    :param wd: directory to look for videos
-    :param upcoming_time: seconds since epoch
-    :param quiet: info level, 0 = all, 1 = only deleted, 2 = nothing
-    """
-    videos = []
-    for f in os.listdir(wd):
-        f = os.path.join(wd, f)
-        if f.lower().endswith('.mp4') and os.path.isfile(f):
-            videos.append((f, os.stat(f).st_mtime))
-    if len(videos) == 0:
-        raise(RuntimeError('cannot free any disk space, no videos found'))
-    videos = sorted(videos, key=lambda x: x[1])
-    oldest_file, oldest_time = videos[0]
-
-    if upcoming_time and upcoming_time <= oldest_time:
-        if quiet < 1:
-            msg('disk limit reached, all videos up to date')
-        quit(0)
-
-    if quiet < 2:
-        msg('removing {}'.format(oldest_file))
-    os.remove(oldest_file)
-    # Add a "deleted" marker
-    with open(oldest_file + '.deleted', 'w', encoding='utf-8') as f:
-        f.write('')
 
 
 class Category:

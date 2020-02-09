@@ -33,28 +33,15 @@ add_arguments(parser, ['--quiet',
 jw = JWPubMedia()
 
 parser.parse_args(namespace=jw)
-mode = jw.mode
 
 r = jw.parse()
 
 wd = jw.work_dir
 subdir = jw.pub + '-' + jw.lang
 
-if not mode or mode == 'stdout':
-    subdir = ''
 
-jw.download_all(os.path.join(wd, subdir))
+jw.prepare_download()
+jw.manage_downloads()
 
-if not mode:
-    pass
-elif mode == 'stdout':
+if jw.mode == 'stdout':
     jo.output_stdout(r, wd)
-elif mode == 'm3u':
-    jo.output_m3u(r, wd, subdir)
-elif mode == 'm3ucompat':
-    jo.output_m3u(r, wd, subdir, flat=True)
-elif mode == 'filesystem':
-    jo.clean_symlinks(os.path.join(wd, subdir), quiet=jw.quiet)
-    jo.output_filesystem(r, wd, subdir, include_keyname=True)
-elif mode == 'html':
-    jo.output_html(r, wd, subdir)
