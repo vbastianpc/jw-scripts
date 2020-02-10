@@ -70,7 +70,6 @@ class JWSigns:
         elif os.path.isdir(self.input):
             videos = []
             for dirpath, dirnames, filenames in os.walk(self.input):
-                print(dirpath, sorted(filenames))
                 for filename in sorted(filenames):
                     if filename.endswith('.mp4') or filename.endswith('.m4v'):
 
@@ -129,16 +128,16 @@ class JWSigns:
     def parse(self):
         """Parsing nwt videos"""
         self.db = self._get_db()
-        print(f'Getting splited videos from {self.work_dir}... ', flush=True)
         print('This may take several minutes', flush=True)
+        print(f'Getting splited videos from {self.work_dir}... ', end='', flush=True)
         verse_videos = self.get_cutup_verses()
-        [print(x) for x in verse_videos]
-        print(f'done\nGetting match videos from {self.input}... ', end='')
+        # [print(x) for x in verse_videos]
+        print(f'done\nGetting match videos from {self.input}... ', end='', flush=True)
         match_videos = self.get_match_videos()
-        [print(x) for x in match_videos]
+        # [print(x) for x in match_videos]
         self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
-        print('Getting chapter marks from match videos... ', end='')
+        print('done\nGetting chapter marks from match videos... ', end='')
         result = []
         for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
