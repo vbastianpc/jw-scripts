@@ -401,8 +401,9 @@ class JWBroadcasting:
 
         for media in download_list:
             # Clean up until there is enough space
+            print(media.name, media.size, media.file, media.url, sep=' | ')
             space = shutil.disk_usage(wd).free
-            needed = media.size + self.keep_free
+            needed = media.size + self.keep_free if media.size else 0
             if space < needed:
                 s = 'Please, free up hard disk space\n' \
                     'Free space: {:} MiB, needed: {:} MiB'.format(space//1024**2, needed//1024**2)
