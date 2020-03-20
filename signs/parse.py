@@ -53,16 +53,13 @@ class JWSigns:
         attrib_hidden(dir)
         self.dirdb = pj(dir, 'db.json')
         if not os.path.exists(self.dirdb):
-            with open(self.dirdb, 'w', encoding='utf-8'):
-                pass
-            db = {}
+            self.db = {}
         else:
             with open(self.dirdb, 'r', encoding='utf-8') as json_file:
                 try:
-                    db = json.load(json_file)
+                    self.db = json.load(json_file)
                 except (UnsupportedOperation, JSONDecodeError):
-                    db = {}
-        return db
+                    self.db = {}
 
     def get_match_videos(self):
         if os.path.isfile(self.input):
@@ -91,20 +88,40 @@ class JWSigns:
             raise ValueError(f'{self.input} is not a valid directory')
 
     def get_cutup_verses(self):
+        path = pj(self.work_dir, 'db', 'ready.json')
+        try:
+            with open(path, 'r', encoding='utf-8') as jsonfile:
+                ready = json.load(jsonfile)
+
+        except (FileNotFoundError, UnsupportedOperation, JSONDecodeError):
+            ready = {}
+
+        print(ready)
         versiculos = {}
         for dirpath, dirnames, filenames in os.walk(self.work_dir):
-            for filename in filenames:
-                if filename.endswith('.mp4') or filename.endswith('.m4v') \
-                        and not filename.startswith('nwt'):
-                    if ffprobe_signature(pj(dirpath, filename)) == 'vbastianpc':
-                        versiculos.setdefault(woext(filename),
-                                              pj(dirpath, filename))
+            print(dirpath)
+            for filename in sorted(filenames):
+                if filename.endswith('.mp4') or filename.endswith('.m4v') and not filename.startswith('nwt'):
+                    if ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
+                        versiculos.update({woext(filename): pj(dirpath, filename)})
+                        print(f'...fast...{filename}')
+                    elif 'vbastianpc' in ffprobe_signature(pj(dirpath, filename)):
+                        versiculos.update({woext(filename): pj(dirpath, filename)})
+                        ready.update({woext(filename): os.stat(pj(dirpath, filename)).st_size})
+                        print(f'...slow...{filename}')
+                    else:
+                        print(filename, '...slow... es video, pero no tiene firma')
+                else:
+                    print(filename, 'no es ni video')
+
+            with open(path, 'w', encoding='utf-8') as jsonfile:
+                json.dump(ready, jsonfile, ensure_ascii=False, indent=4)
         return versiculos
 
 
     def raw_parse(self):
         """Parsing any video"""
-        self.db = self._get_db()
+        self._get_db()
         result = []
         match_videos = self.get_match_videos()
         verse_videos = self.get_cutup_verses()
@@ -128,11 +145,11 @@ class JWSigns:
 
     def parse(self):
         """Parsing nwt videos"""
-        self.db = self._get_db()
+        self._get_db()
         print(f'Getting splited videos from {self.work_dir}... ', flush=True)
         print('This may take several minutes', flush=True)
         verse_videos = self.get_cutup_verses()
-        [print(x) for x in verse_videos]
+        # [print(x) for x in verse_videos]
         print(f'done\nGetting match videos from {self.input}... ', end='')
         match_videos = self.get_match_videos()
         [print(x) for x in match_videos]
@@ -244,8 +261,7 @@ class JWSigns:
             if self.hwaccel and 'cuvid' in err:
                 print('It seems that your graphics card is not compatible'
                       ', or you must install the drivers and CUDA Toolkit. '
-                      '\nPlease visit https://github.com/vbastianpc/'
-                      'jw-scripts/wiki/jw-signs-(E)')
+                      '\nPlease visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
                 exit(1)
 
         return console
