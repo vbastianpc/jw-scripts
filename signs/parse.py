@@ -90,31 +90,25 @@ class JWSigns:
         path = pj(self.work_dir, 'db', 'ready.json')
         try:
             with open(path, 'r', encoding='utf-8') as jsonfile:
-                ready = json.load(jsonfile)
+                self.ready = json.load(jsonfile)
 
         except (FileNotFoundError, UnsupportedOperation, JSONDecodeError):
-            ready = {}
+            self.ready = {}
 
-        print(ready)
         versiculos = {}
         for dirpath, dirnames, filenames in os.walk(self.work_dir):
-            print(dirpath)
             for filename in sorted(filenames):
                 if filename.endswith('.mp4') or filename.endswith('.m4v') and not filename.startswith('nwt'):
-                    if ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
+                    if self.ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
                         versiculos.update({woext(filename): pj(dirpath, filename)})
-                        print(f'...fast...{filename}')
+                        # print(f'...fast...{filename}')
                     elif 'vbastianpc' in ffprobe_signature(pj(dirpath, filename)):
                         versiculos.update({woext(filename): pj(dirpath, filename)})
-                        ready.update({woext(filename): os.stat(pj(dirpath, filename)).st_size})
-                        print(f'...slow...{filename}')
-                    else:
-                        print(filename, '...slow... es video, pero no tiene firma')
-                else:
-                    print(filename, 'no es ni video')
+                        self.ready.update({woext(filename): os.stat(pj(dirpath, filename)).st_size})
+                        # print(f'...slow...{filename}')
 
             with open(path, 'w', encoding='utf-8') as jsonfile:
-                json.dump(ready, jsonfile, ensure_ascii=False, indent=4)
+                json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
         return versiculos
 
 
@@ -144,21 +138,12 @@ class JWSigns:
 
     def parse(self):
         """Parsing nwt videos"""
-<<<<<<< HEAD
         self._get_db()
-        print(f'Getting splited videos from {self.work_dir}... ', flush=True)
-=======
-        self.db = self._get_db()
->>>>>>> 9481c183ee79d1a7744c5ee6eeca9748c26a5321
         print('This may take several minutes', flush=True)
         print(f'Getting splited videos from {self.work_dir}... ', end='', flush=True)
         verse_videos = self.get_cutup_verses()
         # [print(x) for x in verse_videos]
-<<<<<<< HEAD
-        print(f'done\nGetting match videos from {self.input}... ', end='')
-=======
         print(f'done\nGetting match videos from {self.input}... ', end='', flush=True)
->>>>>>> 9481c183ee79d1a7744c5ee6eeca9748c26a5321
         match_videos = self.get_match_videos()
         # [print(x) for x in match_videos]
         self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
@@ -175,7 +160,7 @@ class JWSigns:
                 # print(mark['title'], end='\t')
                 if self.db.get(woext(video)) == os.stat(video).st_size and \
                         verse_videos.get(mark['title']):
-                    # verse it exist, do nothing
+                    # verse it exist and is the latest version. do nothing
                     pass
                     # print('already exists')
                 else:
@@ -219,6 +204,10 @@ class JWSigns:
             progress_bar_thread.join()
             if process.returncode == 0:
                 print('done')
+                self.ready.update({woext(outvid): os.stat(outvid).st_size})
+        path = pj(self.work_dir, 'db', 'ready.json')
+        with open(path, 'w', encoding='utf-8') as jsonfile:
+            json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
 
     # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
     def split_video(self, input, start, end, output, color=None, hwaccel=False):
