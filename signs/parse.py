@@ -234,7 +234,7 @@ class JWSigns:
                 )
             # print(vf)
             cmd += ['-vf', vf]
-        if hwaccel and not color:
+        if hwaccel:
             cmd += ['-c:v', 'h264_nvenc', '-preset', 'slow', '-b:v', '1000k']
         cmd += ['-f', 'mp4', output + '.part']
 
@@ -256,7 +256,7 @@ class JWSigns:
 
             err = console.stderr.decode('utf-8')
             print(err)
-            if self.hwaccel and 'cuvid' in err:
+            if self.hwaccel and 'CUDA' in err:
                 print('It seems that your graphics card is not compatible'
                       ', or you must install the drivers and CUDA Toolkit. '
                       '\nPlease visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
