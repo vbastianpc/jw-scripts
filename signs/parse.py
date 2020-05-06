@@ -215,7 +215,8 @@ class JWSigns:
         cmd = [FFMPEG, '-y', '-loglevel', 'warning',
                '-hide_banner', '-ss', str(start)]
         if hwaccel:
-            cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
+            cmd += ['-hwaccel', 'cuda']
+            # cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
         cmd += ['-i', input, '-to', str(end - start),
                 '-map_chapters', '-1',
                 # TODO make map_chapters test if join video
