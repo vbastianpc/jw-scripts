@@ -235,7 +235,7 @@ class JWSigns:
             # print(vf)
             cmd += ['-vf', vf]
         if hwaccel:
-            cmd += ['-c:v', 'h264_nvenc', '-preset', 'slow', '-b:v', '1000k']
+            cmd += ['-c:v', 'h264_nvenc', '-cq:v', '26', '-profile:v', 'high']
         cmd += ['-f', 'mp4', output + '.part']
 
         # print(' '.join(cmd))
