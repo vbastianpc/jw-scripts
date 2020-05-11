@@ -25,18 +25,11 @@ parser.add_argument('--raw',
                     action='store_true',
                     help='split videos without name parsing mark chapters')
 
-"""
-jw-signs '/Users/bastianpalavecino/Desktop/nwt-LSCH Descargas' '/Users/bastianpalavecino/Desktop/cortes'
-jw-signs '/Users/bastianpalavecino/Desktop/nwt-LSCH Descargas' --book 40 '/Users/bastianpalavecino/Desktop/cortes'
-jw-signs '/Users/bastianpalavecino/Desktop/vbastianpc/nwt_57_Phm_SCH_01_r480P.mp4' '/Users/bastianpalavecino/Desktop/cortes'
-"""
 
 
 jw = JWSigns()
 parser.parse_args(namespace=jw)
-# print(vars(jw))
-# print(*jw.get_match_videos(), sep='\n', end='\n')
-# print(*jw.get_cutup_verses(), sep='\n', end='\n')
+
 
 try:
     if jw.raw:
