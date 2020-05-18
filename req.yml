@@ -1,9 +1,8 @@
-name: base
+name: jw
+channels:
+  - conda-forge
 dependencies:
-  - python
-  - ffmpeg
+  - python=3.8
+  - ffmpeg>=4.2
   - curl
-  - git
-  - pip
-  - pip:
-    - Pillow
+  - Pillow
