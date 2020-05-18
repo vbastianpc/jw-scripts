@@ -195,6 +195,13 @@ class JWSigns:
             if process.returncode == 0:
                 print('done')
                 self.ready.update({name: os.stat(pj(outdir, name + '.mp4')).st_size})
+            else:
+                print(
+                    f'Ups! Something was wrong\nVideo input: {pj(outdir, name)}\n'
+                    f'hwaccel: {hwaccel}\n hevc: {hevc}\n16:9 {not bool(color)}\n'
+                    f'start: {task["start"]}\nend: {task["end"]}'
+                )
+                exit(1)
 
         path = pj(self.work_dir, 'db', 'ready.json')
         with open(path, 'w', encoding='utf-8') as jsonfile:
@@ -252,11 +259,15 @@ class JWSigns:
 
             err = console.stderr.decode('utf-8')
             print(err)
-            if self.hwaccel and 'cuda' in err.casefold():
-                print('It seems that your graphics card is not compatible'
-                      ', or you must install the drivers and CUDA Toolkit. '
-                      '\nPlease visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
-                exit(1)
+            if self.hwaccel and any(elem in err.casefold() for elem in ['cuda', 'cuvid', 'nvidia', 'hwaccel']):
+                print('\nTranscoding with hardware acceleration is not possible. '
+                      'It is probably due to one of these 3 cases:\n'
+                      '\t- You do not have a dedicated graphics card.\n'
+                      '\t- You do not have a compatible graphics card.\n'
+                      '\t- You don\'t have the Nvidia software installed.\n\n'
+                      'Please visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)'
+                )
+                
         return console
 
     def _verificaBordes(self, dir_file, start):
