@@ -5,43 +5,30 @@ import json
 import threading
 import io
 from subprocess import run
+import shlex
+from PIL import Image
+
 from os.path import join as pj
 from io import UnsupportedOperation
 from json.decoder import JSONDecodeError
 
 from signs.constants import (
-    FFMPEG, probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
+    probe_markers, parse_markers_nwt, parse_markers_raw, ext, woext,
     parse_num_book, attrib_hidden, ffprobe_signature,
     get_nwt_video_info, add_numeration, ffprobe_height, run_progress_bar
 )
-
-
-try:
-    from PIL import Image
-except ModuleNotFoundError:
-    print('Installing Pillow package')
-    p = run(['pip', 'install', 'Pillow'], capture_output=True)
-    if p.returncode == 0:
-        from PIL import Image
-    else:
-        print(
-            'No se ha podido instalar la librería PIL. Debes instalarla '
-            'manualmente.\n\nSi estás en Windows, abre el Símbolo del sistema '
-            'como administrador y ejecuta: pip install PIL\n\nSi estás en '
-            'macOS o Linux, abre el terminal y escribe: '
-            'sudo pip install PIL')
-        exit()
-
 
 class JWSigns:
     """
     Clase
     """
     nwt = True
-    book = 0
+    book = '0'
+    chapter = '0'
     input = ''
     work_dir = '.'
     hwaccel = False
+    hevc = False
     raw = False
 
     def __init__(self):
@@ -62,31 +49,31 @@ class JWSigns:
                     self.db = {}
 
     def get_match_videos(self):
+        print(f'Getting nwt videos from {self.input}', end='\t-> ', flush=True)
         if os.path.isfile(self.input):
             return [self.input]
         elif os.path.isdir(self.input):
             videos = []
             for dirpath, dirnames, filenames in os.walk(self.input):
                 for filename in sorted(filenames):
-                    if filename.endswith('.mp4') or filename.endswith('.m4v'):
+                    if filename.startswith('nwt') and (filename.endswith('.mp4') or filename.endswith('.m4v')):
 
-                        if self.nwt is None:
-                            self.nwt = True if filename.startswith('nwt') else False
-                        if self.nwt is True and filename.startswith('nwt'):
-                            book = int(get_nwt_video_info(filename, 'booknum'))
-                            if book == self.book or self.book == 0:
-                                videos.append(pj(dirpath, filename))
+                        book = int(get_nwt_video_info(filename, 'booknum'))
+                        chapter = int(get_nwt_video_info(filename, 'chapter'))
 
-                        elif self.nwt is False and not filename.startswith('nwt'):
+                        if (book in self.books or 0 in self.books) and (chapter in self.chapters or 0 in self.chapters):
                             videos.append(pj(dirpath, filename))
-                # not entry in subdirs
                 break
 
-            return videos
-        else:
-            raise ValueError(f'{self.input} is not a valid directory')
+        print(f'{len(videos)} found')
+        if len(videos) == 0:
+            print('No nwt videos found')
+            exit(1)
+        return videos
+
 
     def get_cutup_verses(self):
+        print(f'Getting verses videos from {self.work_dir}', end='\t-> ', flush=True)
         path = pj(self.work_dir, 'db', 'ready.json')
         try:
             with open(path, 'r', encoding='utf-8') as jsonfile:
@@ -97,18 +84,21 @@ class JWSigns:
 
         versiculos = {}
         for dirpath, dirnames, filenames in os.walk(self.work_dir):
-            for filename in sorted(filenames):
-                if filename.endswith('.mp4') or filename.endswith('.m4v') and not filename.startswith('nwt'):
-                    if self.ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
-                        versiculos.update({woext(filename): pj(dirpath, filename)})
-                        # print(f'...fast...{filename}')
-                    elif 'vbastianpc' in ffprobe_signature(pj(dirpath, filename)):
-                        versiculos.update({woext(filename): pj(dirpath, filename)})
-                        self.ready.update({woext(filename): os.stat(pj(dirpath, filename)).st_size})
+            if dirpath[len(self.work_dir):].count(os.sep) < 2: # nivel prinicpal y un nivel de subdirectorio
+                for filename in sorted(filenames):
+                    if (filename.endswith('.mp4') or filename.endswith('.m4v')) and not filename.startswith('nwt'):
+                        print(f'Debería serlo: {filename}')
+                        if self.ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
+                            versiculos.update({woext(filename): pj(dirpath, filename)})
+                            # print(f'...fast...{filename}')
+                        elif 'vbastianpc' in ffprobe_signature(pj(dirpath, filename)):
+                            versiculos.update({woext(filename): pj(dirpath, filename)})
+                            self.ready.update({woext(filename): os.stat(pj(dirpath, filename)).st_size})
                         # print(f'...slow...{filename}')
 
-            with open(path, 'w', encoding='utf-8') as jsonfile:
-                json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
+        with open(path, 'w', encoding='utf-8') as jsonfile:
+            json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
+        print(f'{len(versiculos)} found')
         return versiculos
 
 
@@ -135,20 +125,20 @@ class JWSigns:
         print('raw', verse_videos)
         return result
 
-
     def parse(self):
         """Parsing nwt videos"""
+        self.work_dir = expandpath(self.work_dir)
+        self.input = expandpath(self.input)
+        self.books = [int(bk) for bk in self.book.split(',')]
+        self.chapters = [int(chp) for chp in self.chapter.split(',')]
+
         self._get_db()
         print('This may take several minutes', flush=True)
-        print(f'Getting splited videos from {self.work_dir}... ', end='', flush=True)
         verse_videos = self.get_cutup_verses()
-        # [print(x) for x in verse_videos]
-        print(f'done\nGetting match videos from {self.input}... ', end='', flush=True)
         match_videos = self.get_match_videos()
-        # [print(x) for x in match_videos]
         self.num_bookname = parse_num_book(get_nwt_video_info(match_videos[0], 'lang'))
         add_numeration(self.work_dir, self.num_bookname)
-        print('done\nGetting chapter marks from match videos... ', end='')
+        print(f'Getting chapter marks from {self.input}', end='\t-> ')
         result = []
         for video in match_videos:
             booknum = get_nwt_video_info(video, 'booknum')
@@ -167,7 +157,7 @@ class JWSigns:
                     result.append(mark)
             self.db[woext(video)] = os.stat(video).st_size
         self.write_json(self.db)
-        print('done\n')
+        print(f'{len(result)} found\n')
         return result
 
     def cook(self, result):
@@ -199,56 +189,62 @@ class JWSigns:
                 output=outvid,
                 color=color,
                 hwaccel=self.hwaccel,
+                hevc=self.hevc,
                 )
             self.finished_event.set()
             progress_bar_thread.join()
             if process.returncode == 0:
                 print('done')
                 self.ready.update({woext(outvid): os.stat(outvid).st_size})
+
         path = pj(self.work_dir, 'db', 'ready.json')
         with open(path, 'w', encoding='utf-8') as jsonfile:
             json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
 
-    # TODO verificar borde de acuerdo a tamaño de video. Al igual que vf franjas de color
-    def split_video(self, input, start, end, output, color=None, hwaccel=False):
+    def split_video(self, input, start, end, output, color=None, hwaccel=False, hevc=False):
         os.makedirs(os.path.dirname(output), exist_ok=True)
-        cmd = [FFMPEG, '-y', '-loglevel', 'warning',
-               '-hide_banner', '-ss', str(start)]
-        if hwaccel:
-            cmd += ['-hwaccel', 'cuda']
+        prelude = f'ffmpeg -y -loglevel warning -hide_banner -ss {str(start)} '
+        decodeHW = '-hwaccel cuda '
             # cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
-        cmd += ['-i', input, '-to', str(end - start),
-                '-map_chapters', '-1',
-                # TODO make map_chapters test if join video
-                '-metadata', 'title=',
-                '-metadata', 'genre=vbastianpc',
-                '-metadata', 'comment=https://github.com/vbastianpc/jw-scripts']
+        core = (
+            f'-i "{input}" -to {str(end - start)} -map_chapters -1 '
+            '-metadata title= -metadata genre=vbastianpc '
+            '-metadata comment=https://github.com/vbastianpc/jw-scripts '
+        )
         if color:
             height = self.current_height
             delta = int(height * 4 / 3 * 0.02)  # 2% security
             width_bar = int((height * 16 / 9 - height * 4 / 3) / 2) + delta
             x_offset = int(height * 16 / 9 - width_bar)
-            vf = (
-                f'drawbox=x=0:y=0:w={width_bar}:h={height}:color={color[0]}:t=fill, '
-                f'drawbox=x={x_offset}:y=0:w={width_bar}:h={height}:color={color[1]}:t=fill'
+            core += ('-vf '
+                f'"drawbox=x=0:y=0:w={width_bar}:h={height}:color={color[0]}:t=fill, '
+                f'drawbox=x={x_offset}:y=0:w={width_bar}:h={height}:color={color[1]}:t=fill" '
                 )
-            # print(vf)
-            cmd += ['-vf', vf]
-        if hwaccel:
-            cmd += ['-c:v', 'h264_nvenc', '-cq:v', '26', '-profile:v', 'high']
-        cmd += ['-f', 'mp4', output + '.part']
+        if hevc:
+            encodeHW = '-c:v hevc_nvenc -cq:v 31 -profile:v high '
+            encodeCPU = '-c:v libx265 '
+        else:
+            encodeHW = '-c:v h264_nvenc -cq:v 26 -profile:v high '
+            encodeCPU = '-c:v libx264 '
+        end = f'-f mp4 \"{output + ".part"}\" '
 
-        # print(' '.join(cmd))
+        if hwaccel:
+            cmd = prelude + decodeHW + core + encodeHW + end
+        else:
+            cmd = prelude + core + encodeCPU + end
+
         # https://superuser.com/questions/1320389/updating-mp4-chapter-times-and-names-with-ffmpeg
-        console = run(cmd, capture_output=True)
-        if console.returncode == 0:
+
+        console = run(shlex.split(cmd), capture_output=True)
+
+        if console.returncode == 0: # success
             try:
                 os.remove(output)
             except FileNotFoundError:
                 pass
-            os.rename(output + '.part', output)
-
-        else:
+            else:
+                os.rename(output + '.part', output)
+        else: # error
             try:
                 os.remove(output + '.part')
             except FileNotFoundError:
@@ -261,13 +257,11 @@ class JWSigns:
                       ', or you must install the drivers and CUDA Toolkit. '
                       '\nPlease visit https://github.com/vbastianpc/jw-scripts/wiki/jw-signs-(E)')
                 exit(1)
-
         return console
 
     def _verificaBordes(self, dir_file, start):
-        cmd = [FFMPEG, '-y', '-hide_banner', '-ss', str(start + 0.5),
-               '-i', dir_file, '-vframes', '1', '-f', 'image2pipe', '-']
-        console = run(cmd, capture_output=True)
+        cmd = f'ffmpeg -y -hide_banner -ss {str(start + 0.5)} -i {dir_file} -vframes 1 -f image2pipe -'
+        console = run(shlex.split(cmd), capture_output=True)
         try:
             img = Image.open(io.BytesIO(console.stdout))
         except:
@@ -294,3 +288,11 @@ class JWSigns:
     def write_json(self, data):
         with open(self.dirdb, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
+
+
+def expandpath(path):
+    path = os.path.abspath(os.path.expanduser(os.path.expandvars(path)))
+    if os.path.isfile(path) or os.path.isdir(path):
+        return path
+    else:
+        raise ValueError(f'{path} is not a valid directory')

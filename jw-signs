@@ -9,18 +9,27 @@ from signs.parse import JWSigns
 parser = argparse.ArgumentParser(prog='jw-signs',
                                  usage='%(prog)s [INPUT] [options] [DIR]',
                                  description='Split videos Bible jw.org sign language')
-add_arguments(parser, ['--quiet',
-                       '--book'])
+add_arguments(parser, ['--quiet'])
 
 parser.add_argument('input',
                     metavar='INPUT DIR',
                     help='input directory of file or folder')
+parser.add_argument('--book',
+                    default='0',
+                    help='comma separated list of booknums')
+parser.add_argument('--chapter',
+                    default='0',
+                    help='comma separated list of chapters')
 parser.add_argument('--hwaccel',
                     action='store_true',
                     help='hardware acceleration nvidia')
+parser.add_argument('--hevc',
+                    action='store_true',
+                    help='High Efficiency Video Coding also known as H.265')
 parser.add_argument('work_dir',
                     metavar='OUTPUT DIR',
                     help='directory to save data in')
+
 parser.add_argument('--raw',
                     action='store_true',
                     help='split videos without name parsing mark chapters')
