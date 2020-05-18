@@ -87,7 +87,6 @@ class JWSigns:
             if dirpath[len(self.work_dir):].count(os.sep) < 2: # nivel prinicpal y un nivel de subdirectorio
                 for filename in sorted(filenames):
                     if (filename.endswith('.mp4') or filename.endswith('.m4v')) and not filename.startswith('nwt'):
-                        print(f'Debería serlo: {filename}')
                         if self.ready.get(woext(filename)) == os.stat(pj(dirpath, filename)).st_size:
                             versiculos.update({woext(filename): pj(dirpath, filename)})
                             # print(f'...fast...{filename}')
@@ -174,10 +173,9 @@ class JWSigns:
                 outvid = pj(self.work_dir,
                             f"{format(i, '02')} {task['title']}{ext(task['parent'])}")
             else:
+                outdir = pj(self.work_dir, task['booknum'] + ' ' + self.num_bookname[task['booknum']])
+                name = task['title']
                 color = self._verificaBordes(task['parent'], task['start'])
-                outvid = pj(self.work_dir,
-                            task['booknum'] + ' ' + self.num_bookname[task['booknum']],
-                            task['title'] + ext(task['parent']))
 
             self.finished_event = threading.Event()
             progress_bar_thread = threading.Thread(target=run_progress_bar, args=(self.finished_event,))
@@ -186,7 +184,8 @@ class JWSigns:
                 input=task['parent'],
                 start=task['start'],
                 end=task['end'],
-                output=outvid,
+                outdir=outdir,
+                name=name,
                 color=color,
                 hwaccel=self.hwaccel,
                 hevc=self.hevc,
@@ -195,20 +194,21 @@ class JWSigns:
             progress_bar_thread.join()
             if process.returncode == 0:
                 print('done')
-                self.ready.update({woext(outvid): os.stat(outvid).st_size})
+                self.ready.update({name: os.stat(pj(outdir, name + '.mp4')).st_size})
 
         path = pj(self.work_dir, 'db', 'ready.json')
         with open(path, 'w', encoding='utf-8') as jsonfile:
             json.dump(self.ready, jsonfile, ensure_ascii=False, indent=4)
 
-    def split_video(self, input, start, end, output, color=None, hwaccel=False, hevc=False):
-        os.makedirs(os.path.dirname(output), exist_ok=True)
+    def split_video(self, input, start, end, outdir, name, color=None, hwaccel=False, hevc=False):
+        os.makedirs(outdir, exist_ok=True)
+        bareoutput = pj(outdir, name)
         prelude = f'ffmpeg -y -loglevel warning -hide_banner -ss {str(start)} '
         decodeHW = '-hwaccel cuda '
             # cmd += ['-hwaccel', 'cuvid', '-c:v', 'h264_cuvid']
         core = (
             f'-i "{input}" -to {str(end - start)} -map_chapters -1 '
-            '-metadata title= -metadata genre=vbastianpc '
+            f'-metadata title="{name}" -metadata genre=vbastianpc '
             '-metadata comment=https://github.com/vbastianpc/jw-scripts '
         )
         if color:
@@ -226,7 +226,7 @@ class JWSigns:
         else:
             encodeHW = '-c:v h264_nvenc -cq:v 26 -profile:v high '
             encodeCPU = '-c:v libx264 '
-        end = f'-f mp4 \"{output + ".part"}\" '
+        end = f'-f mp4 \"{bareoutput + ".part"}\" '
 
         if hwaccel:
             cmd = prelude + decodeHW + core + encodeHW + end
@@ -239,14 +239,14 @@ class JWSigns:
 
         if console.returncode == 0: # success
             try:
-                os.remove(output)
+                os.remove(bareoutput + '.mp4')
             except FileNotFoundError:
                 pass
-            else:
-                os.rename(output + '.part', output)
+            finally:
+                os.rename(bareoutput + '.part', bareoutput + '.mp4')
         else: # error
             try:
-                os.remove(output + '.part')
+                os.remove(bareoutput + '.part')
             except FileNotFoundError:
                 pass
 

@@ -10,7 +10,6 @@ from subprocess import run
 from os.path import join as pj
 import urllib.request
 import urllib.parse
-
 from sys import stderr
 
 
@@ -65,13 +64,6 @@ def attrib_hidden(dir):
         run(['chflags', 'hidden', dir], capture_output=True)
 
 
-# FFPROBE = os.path.join(os.getcwd(), 'ffprobe')
-# FFMPEG = os.path.join(os.getcwd(), 'ffmpeg')
-
-FFPROBE = 'ffprobe'
-FFMPEG = 'ffmpeg'
-
-
 def ext(filename):
     return os.path.splitext(os.path.basename(filename))[-1]
 
@@ -84,7 +76,7 @@ def probe_markers(filename):
     """
     Returns markers (chapters) from filename with ffprobe
     """
-    console = run([FFPROBE, '-v', 'quiet', '-show_chapters',
+    console = run(['ffprobe', '-v', 'quiet', '-show_chapters',
                    '-print_format', 'json', filename
                    ],
                   capture_output=True)
@@ -142,6 +134,7 @@ def parse_markers_nwt(markers, filename, bookname):
             pass
     return result
 
+
 def get_nwt_video_info(filename, info):
     try:
         if info == 'booknum':
@@ -191,20 +184,21 @@ def get_chptr_verse(raw_title):
 
 
 def probe_general(video):
-    cmd_probe_general = [FFPROBE, '-v', 'quiet', '-show_format',
+    cmd_probe_general = ['ffprobe', '-v', 'quiet', '-show_format',
                          '-print_format', 'json', video]
     console = run(cmd_probe_general, capture_output=True)
     return json.loads(console.stdout.decode('utf-8'))
 
 
 def ffprobe_signature(video):
-    cmd = [FFPROBE, '-v', 'error', '-show_entries', 'format_tags=genre',
+    cmd = ['ffprobe', '-v', 'error', '-show_entries', 'format_tags=genre',
            '-of', 'default=noprint_wrappers=1:nokey=1', video]
     console = run(cmd, capture_output=True)
     return console.stdout.decode('utf-8').strip()
 
+
 def ffprobe_height(video):
-    cmd = [FFPROBE, '-v', 'quiet', '-show_entries', 'stream=height',  '-of',
+    cmd = ['ffprobe', '-v', 'quiet', '-show_entries', 'stream=height',  '-of',
            'default=noprint_wrappers=1:nokey=1', '-select_streams', 'v:0',
            video]
     console = run(cmd, capture_output=True)
