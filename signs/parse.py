@@ -197,8 +197,8 @@ class JWSigns:
                 self.ready.update({name: os.stat(pj(outdir, name + '.mp4')).st_size})
             else:
                 print(
-                    f'Ups! Something was wrong\nVideo input: {pj(outdir, name)}\n'
-                    f'hwaccel: {self.hwaccel}\n hevc: {self.hevc}\n16:9 {not bool(color)}\n'
+                    f'\nUps! Something was wrong\nVideo input: "{pj(outdir, name)}"\n'
+                    f'hwaccel: {self.hwaccel}\nhevc: {self.hevc}\n16:9 {not bool(color)}\n'
                     f'start: {task["start"]}\nend: {task["end"]}'
                 )
                 exit(1)
