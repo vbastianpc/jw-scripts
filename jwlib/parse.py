@@ -1,3 +1,4 @@
+from sys import platform
 from sys import stderr
 import os
 import time
@@ -11,6 +12,13 @@ import urllib.request
 import urllib.parse
 
 from signs.constants import woext, ext
+
+
+if platform.startswith('win'):
+    import ctypes
+    kernel32 = ctypes.windll.kernel32
+    kernel32.SetConsoleMode(kernel32.GetStdHandle(-11), 7)
+
 
 def msg(s):
     print(s, file=stderr, flush=True)
@@ -401,7 +409,7 @@ class JWBroadcasting:
 
         for media in download_list:
             # Clean up until there is enough space
-            print(media.name, media.size, media.file, media.url, sep=' | ')
+            # print(media.name, media.size, media.file, media.url, sep=' | ')
             space = shutil.disk_usage(wd).free
             needed = media.size + self.keep_free if media.size else 0
             if space < needed:
@@ -546,6 +554,7 @@ def _curl(url, file, resume=False, rate_limit='0', curl_path='curl', progress=Fa
             proc.append('-')
 
         subprocess.call(proc, stderr=stderr)
+        print('\033[F\033[K', end='', flush=True)
 
     else:
         # If there is no rate limit, use urllib (for compatibility)
