@@ -228,10 +228,10 @@ class JWSigns:
                 f'drawbox=x={x_offset}:y=0:w={width_bar}:h={height}:color={color[1]}:t=fill" '
                 )
         if hevc:
-            encodeHW = '-c:v hevc_nvenc -cq:v 31 -profile:v high '
+            encodeHW = '-c:v hevc_nvenc -cq:v 31 '
             encodeCPU = '-c:v libx265 '
         else:
-            encodeHW = '-c:v h264_nvenc -cq:v 26 -profile:v high '
+            encodeHW = '-c:v h264_nvenc -cq:v 26 '
             encodeCPU = '-c:v libx264 '
         end = f'-f mp4 \"{bareoutput + ".part"}\" '
 
