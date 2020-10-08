@@ -436,7 +436,7 @@ class JWPubMedia(JWBroadcasting):
 
         :return: a list containing Category and Media objects
         """
-        url_template = 'https://apps.jw.org/GETPUBMEDIALINKS' \
+        url_template = 'https://pubmedia.jw-api.org/GETPUBMEDIALINKS' \
                        '?output=json&alllangs={a}&langwritten={L}&txtCMSLang={L}&pub={p}'
         rawpub = self.pub
         # Watchtower/Awake reference is split up into pub and issue
