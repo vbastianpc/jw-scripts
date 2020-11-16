@@ -33,7 +33,7 @@ def parse_num_book(lang):
         with open(dir_file, 'r', encoding='utf-8') as json_file:
             return json.load(json_file)
     else:
-        url_template = 'https://apps.jw.org/GETPUBMEDIALINKS' \
+        url_template = 'https://pubmedia.jw-api.org/GETPUBMEDIALINKS' \
                        '?output=json&alllangs=0&langwritten={L}&txtCMSLang={L}' \
                        '&pub=nwt&booknum={i}'
         num_book = {}
